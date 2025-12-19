@@ -1,0 +1,5 @@
+pandas
+numpy
+langdetect
+sentence-transformers
+faiss-cpu
