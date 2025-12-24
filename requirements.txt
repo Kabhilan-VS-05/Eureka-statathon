@@ -1,0 +1,6 @@
+pandas
+numpy
+flask
+sentence-transformers
+faiss-cpu
+langdetect
