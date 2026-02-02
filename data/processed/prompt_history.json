@@ -185,5 +185,374 @@
     "occupation_title": "Script Researcher",
     "nco_code": "2641.0602",
     "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T04:38:22.116582+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T04:48:11.217083+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:20.012351+00:00",
+    "query": "s",
+    "translated_query": "s",
+    "was_translated": false,
+    "occupation_title": "System Analysts, Other",
+    "nco_code": "2511.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:20.159489+00:00",
+    "query": "st",
+    "translated_query": "st",
+    "was_translated": false,
+    "occupation_title": "Public Relations Professionals, Other",
+    "nco_code": "2432.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:21.356435+00:00",
+    "query": "st",
+    "translated_query": "st",
+    "was_translated": false,
+    "occupation_title": "Public Relations Professionals, Other",
+    "nco_code": "2432.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:23.234325+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:23.299449+00:00",
+    "query": "str",
+    "translated_query": "Size ",
+    "was_translated": true,
+    "occupation_title": "Size Maker (Abrasive)",
+    "nco_code": "8131.1700",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:23.550118+00:00",
+    "query": "str",
+    "translated_query": "str. ",
+    "was_translated": true,
+    "occupation_title": "Stenciler",
+    "nco_code": "9321.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:23.671283+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:23.712507+00:00",
+    "query": "sta",
+    "translated_query": "STA",
+    "was_translated": false,
+    "occupation_title": "Public Relations Professionals, Other",
+    "nco_code": "2432.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:35.891512+00:00",
+    "query": "st",
+    "translated_query": "st",
+    "was_translated": false,
+    "occupation_title": "Public Relations Professionals, Other",
+    "nco_code": "2432.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:36.098691+00:00",
+    "query": "s",
+    "translated_query": "s",
+    "was_translated": false,
+    "occupation_title": "System Analysts, Other",
+    "nco_code": "2511.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:36.985556+00:00",
+    "query": "as",
+    "translated_query": "as",
+    "was_translated": false,
+    "occupation_title": "Advertising and Marketing Professionals, Other",
+    "nco_code": "2431.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:37.095964+00:00",
+    "query": "sta",
+    "translated_query": "STA",
+    "was_translated": false,
+    "occupation_title": "Public Relations Professionals, Other",
+    "nco_code": "2432.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:39.498641+00:00",
+    "query": "astr",
+    "translated_query": "astr",
+    "was_translated": false,
+    "occupation_title": "Extruding Machine Operator (Plastic)",
+    "nco_code": "8142.0400",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:40.913891+00:00",
+    "query": "ast",
+    "translated_query": "(asw)",
+    "was_translated": true,
+    "occupation_title": "Dress Diver",
+    "nco_code": "7541.0600",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:41.932698+00:00",
+    "query": "astro",
+    "translated_query": "Astro",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:44.964734+00:00",
+    "query": "astr",
+    "translated_query": "astr",
+    "was_translated": false,
+    "occupation_title": "Extruding Machine Operator (Plastic)",
+    "nco_code": "8142.0400",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:45.721271+00:00",
+    "query": "as",
+    "translated_query": "as",
+    "was_translated": false,
+    "occupation_title": "Advertising and Marketing Professionals, Other",
+    "nco_code": "2431.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:45.893234+00:00",
+    "query": "a",
+    "translated_query": "a",
+    "was_translated": false,
+    "occupation_title": "Ayah, Domestic",
+    "nco_code": "5311.0400",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:46.994782+00:00",
+    "query": "ast",
+    "translated_query": "(asw)",
+    "was_translated": true,
+    "occupation_title": "Dress Diver",
+    "nco_code": "7541.0600",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:28:54.266029+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:29:00.381906+00:00",
+    "query": "s",
+    "translated_query": "s",
+    "was_translated": false,
+    "occupation_title": "System Analysts, Other",
+    "nco_code": "2511.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:29:00.567034+00:00",
+    "query": "st",
+    "translated_query": "st",
+    "was_translated": false,
+    "occupation_title": "Public Relations Professionals, Other",
+    "nco_code": "2432.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:29:02.234526+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:29:02.906767+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:29:15.706552+00:00",
+    "query": "Garbage Waste Detection",
+    "translated_query": "Garbage Waste Detection",
+    "was_translated": false,
+    "occupation_title": "E-Waste Collector",
+    "nco_code": "9611.0201",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:32:03.163457+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:32:39.813101+00:00",
+    "query": "astronet",
+    "translated_query": "astronet",
+    "was_translated": false,
+    "occupation_title": "Astrologer",
+    "nco_code": "5161.0100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:32:48.751159+00:00",
+    "query": "astronaut",
+    "translated_query": "astronaut",
+    "was_translated": false,
+    "occupation_title": "Physicist, General",
+    "nco_code": "2111.0100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:33:04.810878+00:00",
+    "query": "A Physicist, General performs role-specific duties associated with this occupation, applying relevant skills, knowledge, and experience to fulfill organizational or industry requirements.",
+    "translated_query": "A Physicist, General performs role-specific duties associated with this occupation, applying relevant skills, knowledge, and experience to fulfill organizational or industry requirements.",
+    "was_translated": false,
+    "occupation_title": "Physicist, General",
+    "nco_code": "2111.0100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:33:25.744878+00:00",
+    "query": "astronaut",
+    "translated_query": "astronaut",
+    "was_translated": false,
+    "occupation_title": "Physicist, General",
+    "nco_code": "2111.0100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:33:38.907464+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:33:43.424672+00:00",
+    "query": "Astronomer",
+    "translated_query": "Astronomer",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:34:19.021732+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:34:22.877031+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:34:51.503188+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:35:10.228462+00:00",
+    "query": "Astronomer",
+    "translated_query": "Astronomer",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:35:39.599926+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:37:41.586442+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-02T05:37:53.020635+00:00",
+    "query": "Astronomer",
+    "translated_query": "Astronomer",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
   }
 ]

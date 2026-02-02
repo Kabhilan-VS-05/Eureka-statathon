@@ -99,15 +99,31 @@ def search(query):
     for idx, semantic_score in zip(indices[0], scores[0]):
         occ_code = metadata[idx]["nco_2015"]
         gn_score = compute_graph_score(query, occ_code)
-        final_score = ALPHA * float(semantic_score) + BETA * gn_score
-        
-        # Apply final score normalization
-        final_score = min(final_score * 1.3, 1.0)
+        base_score = ALPHA * float(semantic_score) + BETA * gn_score
+
+        # apply global multiplier
+        boosted = base_score * 1.8
+
+        # title-based boost for exact or overlapping queries
+        title = metadata[idx]["occupation_title"]
+        q_clean = clean_text(query)
+        title_clean = clean_text(title)
+        q_words = set(q_clean.split())
+        title_words = set(title_clean.split())
+
+        boost_factor = 1.0
+        if title_clean == q_clean or title_words.issubset(q_words) or q_words.issubset(title_words):
+            boost_factor = 1.6
+        elif len(q_words & title_words) > 0:
+            boost_factor = 1.25
+
+        final_score = min(boosted * boost_factor, 1.0)
         
         details = job_details.get(occ_code, {})
         
         candidates.append({
             "occupation_title": metadata[idx]["occupation_title"],
+            "row_id": metadata[idx].get("row_id", idx),
             "nco_code": occ_code,
             "semantic_score": float(semantic_score),
             "gn_score": float(gn_score),

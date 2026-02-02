@@ -541,11 +541,24 @@
         loadOccupations();
       });
 
-      function loadOccupations() {
-        fetch("/admin/api/occupations")
+      function loadOccupations(query = "") {
+        // Use the main search API so admin uses same search engine
+        fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query })
+        })
           .then((response) => response.json())
           .then((data) => {
-            occupations = data;
+            const results = data.results || [];
+            occupations = results.map((r, idx) => ({
+              row_id: r.row_id !== undefined ? r.row_id : idx,
+              occupation_title: r.occupation_title || "",
+              nco_code: r.nco_code || "",
+              division: (r.details && r.details.division) || "",
+              family: (r.details && r.details.family) || "",
+              description: (r.details && r.details.occupation_description) || ""
+            }));
             filteredOccupations = [...occupations];
             updateStatistics();
             updateFilters();
@@ -680,16 +693,10 @@
       }
 
       function searchOccupations() {
-        const searchTerm = document
-          .getElementById("searchInput")
-          .value.toLowerCase();
-        filteredOccupations = occupations.filter(
-          (occupation) =>
-            occupation.occupation_title.toLowerCase().includes(searchTerm) ||
-            occupation.nco_code.toLowerCase().includes(searchTerm)
-        );
+        const searchTerm = document.getElementById("searchInput").value.trim();
+        // Query the central search engine so admin sees same ranked results
+        loadOccupations(searchTerm);
         currentPage = 1;
-        displayTable();
       }
 
       function filterOccupations() {
