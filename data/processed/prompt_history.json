@@ -1,0 +1,189 @@
+[
+  {
+    "ts": "2025-12-24T16:16:45.133800+00:00",
+    "query": "Finance Managers",
+    "occupation_title": "Finance Managers, Others",
+    "nco_code": "1211.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2025-12-24T16:16:57.174600+00:00",
+    "query": "A Finance Managers, Others performs role-specific duties associated with this occupation, applying relevant skills, knowledge, and experience to fulfill organizational or industry requirements.",
+    "occupation_title": "Finance Managers, Others",
+    "nco_code": "1211.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T05:45:15.105928+00:00",
+    "query": "star",
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T05:52:09.955218+00:00",
+    "query": "நட்சத்திரம்",
+    "occupation_title": "Panchayat Secretary",
+    "nco_code": "4120.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T05:54:40.807929+00:00",
+    "query": "நட்சத்திரம்",
+    "translated_query": "நட்சத்திரம்",
+    "occupation_title": "Panchayat Secretary",
+    "nco_code": "4120.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T05:56:01.536247+00:00",
+    "query": "நட்சத்திரம்",
+    "translated_query": "நட்சத்திரம்",
+    "occupation_title": "Panchayat Secretary",
+    "nco_code": "4120.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:08:09.246758+00:00",
+    "query": "நட்சத்திரம்",
+    "translated_query": "Star",
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:11:06.249825+00:00",
+    "query": "மாம்பழம் வளரும்",
+    "translated_query": "Mango grows",
+    "was_translated": true,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:12:26.604215+00:00",
+    "query": "மாம்பழம் வளரும்",
+    "translated_query": "Mango grows",
+    "was_translated": true,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:13:54.730670+00:00",
+    "query": "I am conversing in tamil. do you understand anything?",
+    "translated_query": "I am conversing in tamil. do you understand anything?",
+    "was_translated": false,
+    "occupation_title": "Language Translator – IT Services",
+    "nco_code": "2643.0402",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:22:53.927435+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:23:23.633277+00:00",
+    "query": "Which things hurt which?",
+    "translated_query": "Which things hurt which?",
+    "was_translated": false,
+    "occupation_title": "Cushion Maker",
+    "nco_code": "7534.0400",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:32:49.692951+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:34:12.489977+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:34:43.076554+00:00",
+    "query": "mongo",
+    "translated_query": "Mung bean",
+    "was_translated": true,
+    "occupation_title": "Mukadam, Salt Production",
+    "nco_code": "9329.0200",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:34:52.480913+00:00",
+    "query": "mango",
+    "translated_query": "mango in ilocano language",
+    "was_translated": true,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:44:42.121984+00:00",
+    "query": "mango",
+    "translated_query": "mango in ilocano language",
+    "was_translated": true,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:45:01.260152+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:45:11.763166+00:00",
+    "query": "mango",
+    "translated_query": "mango in ilocano language",
+    "was_translated": true,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:48:02.119594+00:00",
+    "query": "mango",
+    "translated_query": "mango in ilocano language",
+    "was_translated": true,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-13T06:48:25.898460+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-01-22T04:52:31.546695+00:00",
+    "query": "சிறந்த ஆராய்ச்சியாளர்கள்",
+    "translated_query": "Top Researchers",
+    "was_translated": true,
+    "occupation_title": "Script Researcher",
+    "nco_code": "2641.0602",
+    "client_ip": "127.0.0.1"
+  }
+]
