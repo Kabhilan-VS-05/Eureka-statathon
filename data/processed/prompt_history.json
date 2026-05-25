@@ -1,0 +1,1017 @@
+[
+  {
+    "ts": "2026-02-10T03:35:55.451456+00:00",
+    "query": "mang",
+    "translated_query": "mang",
+    "was_translated": false,
+    "occupation_title": "Man Duck",
+    "nco_code": "6224.1300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:35:55.555416+00:00",
+    "query": "cultivate rice",
+    "translated_query": "cultivated rice",
+    "was_translated": true,
+    "occupation_title": "Paddy Farmer",
+    "nco_code": "6111.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:35:56.621202+00:00",
+    "query": "cultivate rice",
+    "translated_query": "cultivated rice",
+    "was_translated": true,
+    "occupation_title": "Paddy Farmer",
+    "nco_code": "6111.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:38:00.535842+00:00",
+    "query": "cleaner",
+    "translated_query": "Cleaner",
+    "was_translated": false,
+    "occupation_title": "Cleaner, Window",
+    "nco_code": "9122.0100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:38:12.183104+00:00",
+    "query": "website creater",
+    "translated_query": "website creater",
+    "was_translated": false,
+    "occupation_title": "Web Designer",
+    "nco_code": "2166.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:39:36.178245+00:00",
+    "query": "website creator",
+    "translated_query": "website creator",
+    "was_translated": false,
+    "occupation_title": "Web Designer",
+    "nco_code": "2166.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:39:48.078893+00:00",
+    "query": "Cleaner",
+    "translated_query": "Cleaner",
+    "was_translated": false,
+    "occupation_title": "Cleaner, Window",
+    "nco_code": "9122.0100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:46:03.352531+00:00",
+    "query": "cultivate rice",
+    "translated_query": "cultivated rice",
+    "was_translated": true,
+    "occupation_title": "Paddy Farmer",
+    "nco_code": "6111.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:48:46.073810+00:00",
+    "query": "I am a person who studies stars",
+    "translated_query": "I am a person who studies stars",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:49:09.619490+00:00",
+    "query": "I have a mango",
+    "translated_query": "I have a mango.",
+    "was_translated": true,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:49:11.977388+00:00",
+    "query": "I have a mango",
+    "translated_query": "I have a mango",
+    "was_translated": false,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T03:49:45.467357+00:00",
+    "query": "6111.1001",
+    "translated_query": "6111.1001",
+    "was_translated": false,
+    "occupation_title": "Counter",
+    "nco_code": "9321.1200",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T05:38:12.099727+00:00",
+    "query": "hfajksdfsa\nsfd\nASF\nsdfAS\nFAsdfasf",
+    "translated_query": "hfajksdfsa\nsfd\nASF\nsdfAS\nFAsdfasf",
+    "was_translated": false,
+    "occupation_title": "Seaconny/OS (Ordinary Seaman)",
+    "nco_code": "8350.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T05:40:04.092167+00:00",
+    "query": "full",
+    "translated_query": "full",
+    "was_translated": false,
+    "occupation_title": "Full-Stack Development",
+    "nco_code": "7777.40",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:05:24.148140+00:00",
+    "query": "full-stack",
+    "translated_query": "full-stack",
+    "was_translated": false,
+    "occupation_title": "Stencil Printing Operator",
+    "nco_code": "8212.1605",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:05:33.530277+00:00",
+    "query": "full stack",
+    "translated_query": "full stack",
+    "was_translated": false,
+    "occupation_title": "Mono Operator",
+    "nco_code": "7322.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:05:55.988038+00:00",
+    "query": "Full-Stack Developer",
+    "translated_query": "Full-Stack Developer",
+    "was_translated": false,
+    "occupation_title": "Software Developer – Product Development and Delivery",
+    "nco_code": "2512.0301",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:06:15.141074+00:00",
+    "query": "Full-Stack Developer",
+    "translated_query": "Full-Stack Developer",
+    "was_translated": false,
+    "occupation_title": "Software Developer – Product Development and Delivery",
+    "nco_code": "2512.0301",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:06:17.751230+00:00",
+    "query": "Full-Stack Developer",
+    "translated_query": "Full-Stack Developer",
+    "was_translated": false,
+    "occupation_title": "Software Developer – Product Development and Delivery",
+    "nco_code": "2512.0301",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:06:20.166675+00:00",
+    "query": "Full-Stack Developer",
+    "translated_query": "Full-Stack Developer",
+    "was_translated": false,
+    "occupation_title": "Software Developer – Product Development and Delivery",
+    "nco_code": "2512.0301",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:06:26.115758+00:00",
+    "query": "Full-Stack Developer",
+    "translated_query": "Full-Stack Developer",
+    "was_translated": false,
+    "occupation_title": "Software Developer – Product Development and Delivery",
+    "nco_code": "2512.0301",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:08:19.984245+00:00",
+    "query": "full",
+    "translated_query": "full",
+    "was_translated": false,
+    "occupation_title": "Physicist, Heat",
+    "nco_code": "2111.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:09:49.099297+00:00",
+    "query": "full",
+    "translated_query": "full",
+    "was_translated": false,
+    "occupation_title": "Physicist, Heat",
+    "nco_code": "2111.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:10:10.884032+00:00",
+    "query": "web",
+    "translated_query": "web: ",
+    "was_translated": true,
+    "occupation_title": "Web Developer",
+    "nco_code": "2513.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:10:19.268582+00:00",
+    "query": "frontend",
+    "translated_query": "frontend",
+    "was_translated": false,
+    "occupation_title": "Full-Stack Developer",
+    "nco_code": "2512.1100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:10:50.676711+00:00",
+    "query": "8262.85",
+    "translated_query": "8262.85",
+    "was_translated": false,
+    "occupation_title": "Inspector, Excise",
+    "nco_code": "3352.0100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:27:17.948819+00:00",
+    "query": "i am a farmer",
+    "translated_query": "i am a farmer",
+    "was_translated": false,
+    "occupation_title": "Farmer, Livestock",
+    "nco_code": "6121.1000",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:27:42.969690+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:30:43.405000+00:00",
+    "query": "i am farmer",
+    "translated_query": "i am farmer",
+    "was_translated": false,
+    "occupation_title": "Farmer, Livestock",
+    "nco_code": "6121.1000",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:34:16.787319+00:00",
+    "query": "1211.9900",
+    "translated_query": "1211.9900",
+    "was_translated": false,
+    "occupation_title": "Commercial Sales Representatives, Other",
+    "nco_code": "3322.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:38:27.438051+00:00",
+    "query": "Google, I am a farmer.",
+    "translated_query": "Google, I am a farmer.",
+    "was_translated": false,
+    "occupation_title": "Farmer, Livestock",
+    "nco_code": "6121.1000",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:38:29.238234+00:00",
+    "query": "Google, I am a farmer.",
+    "translated_query": "Google, I am a farmer.",
+    "was_translated": false,
+    "occupation_title": "Farmer, Livestock",
+    "nco_code": "6121.1000",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:38:42.613380+00:00",
+    "query": "I have the mango.",
+    "translated_query": "I have the mango.",
+    "was_translated": false,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:48:15.796777+00:00",
+    "query": "i grow banana trees and sell them for profit.",
+    "translated_query": "i grow banana trees and sell them for profit.",
+    "was_translated": false,
+    "occupation_title": "Banana Farmer",
+    "nco_code": "6111.0901",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:49:29.740170+00:00",
+    "query": "मैं केले के पेड़ उगाता हूँ और उन्हें बेचकर मुनाफा कमाता हूँ।",
+    "translated_query": "I grow banana trees and make a profit selling them.",
+    "was_translated": true,
+    "occupation_title": "Banana Farmer",
+    "nco_code": "6111.0901",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:55:47.778607+00:00",
+    "query": "मैं केले के पेड़ उगाता हूँ और उन्हें बेचकर मुनाफा कमाता हूँ।",
+    "translated_query": "I grow banana trees and make a profit selling them.",
+    "was_translated": true,
+    "occupation_title": "Banana Farmer",
+    "nco_code": "6111.0901",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:56:35.512697+00:00",
+    "query": "I grow banana trees and sell them for profit.",
+    "translated_query": "I grow banana trees and sell them for profit.",
+    "was_translated": false,
+    "occupation_title": "Banana Farmer",
+    "nco_code": "6111.0901",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:57:27.050061+00:00",
+    "query": "nalla irukan",
+    "translated_query": "nalla irikan",
+    "was_translated": true,
+    "occupation_title": "Nattuvan",
+    "nco_code": "2653.0200",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:57:33.778443+00:00",
+    "query": "Dhanush",
+    "translated_query": "Dhanush",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T06:57:40.426743+00:00",
+    "query": "I have a banana garden.",
+    "translated_query": "I have a banana garden.",
+    "was_translated": false,
+    "occupation_title": "Banana Farmer",
+    "nco_code": "6111.0901",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-02-10T07:02:35.128391+00:00",
+    "query": "i collect honey from honeycomb hives.",
+    "translated_query": "i collect honey from honeycomb hives.",
+    "was_translated": false,
+    "occupation_title": "Beekeeper",
+    "nco_code": "6123.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:02:38.404886+00:00",
+    "query": "i will collect liquid from mountains and forest",
+    "translated_query": "i will collect liquid from mountains and forest",
+    "was_translated": false,
+    "occupation_title": "Foresters and Related Workers",
+    "nco_code": "6210.0400",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:03:32.806688+00:00",
+    "query": "honey collectors",
+    "translated_query": "honey collectors",
+    "was_translated": false,
+    "occupation_title": "Vending Machine Money Collectors, Meter Readers and Related Workers, Other",
+    "nco_code": "9623.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:04:44.365306+00:00",
+    "query": "i cultivate rice",
+    "translated_query": "i cultivated rice",
+    "was_translated": true,
+    "occupation_title": "Paddy Farmer",
+    "nco_code": "6111.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:05:18.650043+00:00",
+    "query": "i export shirmps",
+    "translated_query": "exporting shirmps.",
+    "was_translated": true,
+    "occupation_title": "Export Manager",
+    "nco_code": "1219.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:05:57.492861+00:00",
+    "query": "i breed and export shrimps",
+    "translated_query": "i breed and export shrimps",
+    "was_translated": false,
+    "occupation_title": "Shrimp Farmer",
+    "nco_code": "6221.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:07:15.519655+00:00",
+    "query": "I am a professor in a private engineering college",
+    "translated_query": "I am a professor in a private engineering college",
+    "was_translated": false,
+    "occupation_title": "University and College Teacher, Engineering/ Professors/Assistant Professors, Engineering",
+    "nco_code": "2310.0700",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:35:01.604849+00:00",
+    "query": "carpenter",
+    "translated_query": "carpenter",
+    "was_translated": false,
+    "occupation_title": "Carpenter, Structural",
+    "nco_code": "7115.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:35:08.260300+00:00",
+    "query": "carpenter",
+    "translated_query": "carpenter",
+    "was_translated": false,
+    "occupation_title": "Carpenter, Structural",
+    "nco_code": "7115.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:38:14.807190+00:00",
+    "query": "carpenter",
+    "translated_query": "carpenter",
+    "was_translated": false,
+    "occupation_title": "Carpenter, Structural",
+    "nco_code": "7115.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:39:32.202348+00:00",
+    "query": "தச்சன்",
+    "translated_query": "Carpenter",
+    "was_translated": true,
+    "occupation_title": "Carpenter, Structural",
+    "nco_code": "7115.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:40:23.738105+00:00",
+    "query": "தச்சன்",
+    "translated_query": "Carpenter",
+    "was_translated": true,
+    "occupation_title": "Carpenter, Structural",
+    "nco_code": "7115.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T04:41:56.322880+00:00",
+    "query": "I have a mango garden.",
+    "translated_query": "I have a mango garden.",
+    "was_translated": false,
+    "occupation_title": "Mango Growe",
+    "nco_code": "6111.1001",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-04-29T05:02:53.532589+00:00",
+    "query": "civil engineering",
+    "translated_query": "Civil Engineering",
+    "was_translated": false,
+    "occupation_title": "Civil Engineering Technicians, Other",
+    "nco_code": "3112.9900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:45:15.982449+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:45:40.407873+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:50:58.885533+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:51:54.478712+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:52:58.116018+00:00",
+    "query": "honey",
+    "translated_query": "honey",
+    "was_translated": false,
+    "occupation_title": "Sulphitation Man, Sugar",
+    "nco_code": "8160.5100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:53:01.064841+00:00",
+    "query": "honey",
+    "translated_query": "honey",
+    "was_translated": false,
+    "occupation_title": "Sulphitation Man, Sugar",
+    "nco_code": "8160.5100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:53:34.452745+00:00",
+    "query": "school",
+    "translated_query": "school",
+    "was_translated": false,
+    "occupation_title": "Language Teacher, Middle School",
+    "nco_code": "2341.0200",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:56:26.470625+00:00",
+    "query": "honey",
+    "translated_query": "honey",
+    "was_translated": false,
+    "occupation_title": "Beekeeper",
+    "nco_code": "6123.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:56:28.026686+00:00",
+    "query": "bee keeper",
+    "translated_query": "bee keeper",
+    "was_translated": false,
+    "occupation_title": "Beekeeper",
+    "nco_code": "6123.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T13:57:15.082543+00:00",
+    "query": "honey",
+    "translated_query": "honey",
+    "was_translated": false,
+    "occupation_title": "Beekeeper",
+    "nco_code": "6123.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:15:52.919027+00:00",
+    "query": "honey",
+    "translated_query": "honey",
+    "was_translated": false,
+    "occupation_title": "Beekeeper",
+    "nco_code": "6123.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:15:54.806908+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:15:54.957519+00:00",
+    "query": "software developer",
+    "translated_query": "software developer",
+    "was_translated": false,
+    "occupation_title": "Software Developer – Application Development",
+    "nco_code": "2512.0204",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:15:55.095473+00:00",
+    "query": "teaches children",
+    "translated_query": "teaches children",
+    "was_translated": false,
+    "occupation_title": "Primary School Teacher",
+    "nco_code": "2341.0400",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:18:40.971738+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:19:08.259507+00:00",
+    "query": "master",
+    "translated_query": "master",
+    "was_translated": false,
+    "occupation_title": "Post Master",
+    "nco_code": "1330.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:26:17.976121+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:26:18.144031+00:00",
+    "query": "honey",
+    "translated_query": "honey",
+    "was_translated": false,
+    "occupation_title": "Beekeeper",
+    "nco_code": "6123.0101",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:26:20.496344+00:00",
+    "query": "drives bus",
+    "translated_query": "drives bus",
+    "was_translated": false,
+    "occupation_title": "Driver, Bus",
+    "nco_code": "8331.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:36:41.967503+00:00",
+    "query": "master",
+    "translated_query": "master",
+    "was_translated": false,
+    "occupation_title": "Post Master",
+    "nco_code": "1330.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:37:13.308068+00:00",
+    "query": "manger",
+    "translated_query": "manger",
+    "was_translated": false,
+    "occupation_title": "Book Mender",
+    "nco_code": "7323.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:39:04.196285+00:00",
+    "query": "master",
+    "translated_query": "master",
+    "was_translated": false,
+    "occupation_title": "Post Master",
+    "nco_code": "1330.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:39:10.943671+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:39:24.942490+00:00",
+    "query": "manger",
+    "translated_query": "manger",
+    "was_translated": false,
+    "occupation_title": "Book Mender",
+    "nco_code": "7323.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:39:47.645419+00:00",
+    "query": "manger",
+    "translated_query": "manger",
+    "was_translated": false,
+    "occupation_title": "Book Mender",
+    "nco_code": "7323.0300",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:41:16.121810+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:41:56.646254+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:42:22.086885+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:42:36.375922+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:42:38.010545+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 10,
+    "returned_count": 10,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:42:39.793324+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 20,
+    "returned_count": 20,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:42:40.248301+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:43:01.962798+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:43:10.747001+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:47:38.809266+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:47:40.445257+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "top_k": 10,
+    "returned_count": 10,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T14:47:41.806821+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "top_k": 20,
+    "returned_count": 20,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:05:37.063642+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:05:50.132782+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:05:56.514251+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:06:08.786976+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:06:11.476468+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:06:27.000789+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:06:38.258724+00:00",
+    "query": "manage",
+    "translated_query": "Management",
+    "was_translated": true,
+    "occupation_title": "Personnel Manager",
+    "nco_code": "1212.0100",
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:07:49.637221+00:00",
+    "query": "manage",
+    "translated_query": "Management",
+    "was_translated": true,
+    "occupation_title": "Personnel Manager",
+    "nco_code": "1212.0100",
+    "top_k": 10,
+    "returned_count": 10,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:07:51.572609+00:00",
+    "query": "Management",
+    "translated_query": "Management",
+    "was_translated": false,
+    "occupation_title": "Personnel Manager",
+    "nco_code": "1212.0100",
+    "top_k": 10,
+    "returned_count": 10,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:07:53.124149+00:00",
+    "query": "manager",
+    "translated_query": "Manager",
+    "was_translated": false,
+    "occupation_title": "Manager – Customer Quality",
+    "nco_code": "1213.0102",
+    "top_k": 10,
+    "returned_count": 10,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:11:40.063055+00:00",
+    "query": "manage",
+    "translated_query": "Management",
+    "was_translated": true,
+    "occupation_title": "Personnel Manager",
+    "nco_code": "1212.0100",
+    "top_k": 10,
+    "returned_count": 10,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:11:43.904941+00:00",
+    "query": "manage",
+    "translated_query": "Management",
+    "was_translated": true,
+    "occupation_title": "Personnel Manager",
+    "nco_code": "1212.0100",
+    "top_k": 10,
+    "returned_count": 10,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:12:10.466507+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 10,
+    "returned_count": 10,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:12:15.693709+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 20,
+    "returned_count": 20,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:12:23.711456+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 50,
+    "returned_count": 50,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-07T15:44:05.917130+00:00",
+    "query": "manage",
+    "translated_query": "Management",
+    "was_translated": true,
+    "occupation_title": "Personnel Manager",
+    "nco_code": "1212.0100",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-08T03:24:35.711001+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-05-08T03:40:18.093216+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 20,
+    "returned_count": 20,
+    "client_ip": "127.0.0.1"
+  }
+]
