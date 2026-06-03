@@ -1,31 +1,26 @@
-import numpy as np
-import faiss
 import os
+import sys
 
-EMBEDDINGS_PATH = "models/nco_embeddings.npy"
-INDEX_PATH = "models/nco_faiss.index"
+import faiss
 
-def load_embeddings(path):
-    return np.load(path)
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_DIR not in sys.path:
+    sys.path.append(PROJECT_DIR)
 
-def build_index(embeddings):
-    dim = embeddings.shape[1]
-    index = faiss.IndexFlatIP(dim)
-    index.add(embeddings)
-    return index
+import db_store
 
-def save_index(index, path):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    faiss.write_index(index, path)
 
 if __name__ == "__main__":
-    print("📥 Loading embeddings...")
-    embeddings = load_embeddings(EMBEDDINGS_PATH)
+    db_store.init_db()
+    print("Loading embeddings from PostgreSQL...")
+    embeddings = db_store.load_embeddings()
+    if embeddings is None:
+        raise RuntimeError("No embeddings found. Run scripts/02_generateEmbedding.py first.")
 
-    print("🧱 Building FAISS index...")
-    index = build_index(embeddings)
+    print("Building FAISS index...")
+    index = faiss.IndexFlatIP(embeddings.shape[1])
+    index.add(embeddings)
+    db_store.save_asset("nco_faiss.index", bytes(faiss.serialize_index(index)), "application/x-faiss")
 
-    save_index(index, INDEX_PATH)
-
-    print("✅ FAISS index created")
-    print(f"🔢 Total vectors indexed: {index.ntotal}")
+    print("FAISS index stored in PostgreSQL")
+    print(f"Total vectors indexed: {index.ntotal}")

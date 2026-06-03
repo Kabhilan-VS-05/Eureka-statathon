@@ -5,14 +5,16 @@ import json
 from datetime import datetime, timezone
 import csv
 import re
-import sqlite3
 import hashlib
 import secrets
+import io
 
 # Add scripts directory to path to import searchapp
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
 # Add utils directory to path to import prompt system
 sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
+import db_store
+db_store.init_db()
 
 # Load search module once at startup for performance
 import importlib.util
@@ -33,45 +35,15 @@ from translation_service import translation_service
 
 app = Flask(__name__)
 
-PROMPT_HISTORY_PATH = os.path.join(os.path.dirname(__file__), 'data', 'processed', 'prompt_history.json')
 CSV_PATH = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'data_with_descriptions.csv')
-DOCUMENTS_PATH = os.path.join(os.path.dirname(__file__), 'data', 'processed', 'nco_documents.json')
-METADATA_PATH = os.path.join(os.path.dirname(__file__), 'data', 'processed', 'nco_metadata.json')
-GN_PATH = os.path.join(os.path.dirname(__file__), 'data', 'processed', 'nco_graph.json')
-EMBEDDINGS_PATH = os.path.join(os.path.dirname(__file__), 'models', 'nco_embeddings.npy')
-INDEX_PATH = os.path.join(os.path.dirname(__file__), 'models', 'nco_faiss.index')
-ADMIN_DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'admin.db')
-
-
-def _get_admin_db_conn():
-    os.makedirs(os.path.dirname(ADMIN_DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(ADMIN_DB_PATH)
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS admin_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
-    )
-    return conn
 
 
 def _get_admin_setting(key):
-    conn = _get_admin_db_conn()
-    try:
-        cur = conn.execute("SELECT value FROM admin_settings WHERE key = ?", (key,))
-        row = cur.fetchone()
-        return row[0] if row else None
-    finally:
-        conn.close()
+    return db_store.get_admin_setting(key)
 
 
 def _set_admin_setting(key, value):
-    conn = _get_admin_db_conn()
-    try:
-        conn.execute(
-            "INSERT OR REPLACE INTO admin_settings (key, value) VALUES (?, ?)",
-            (key, value),
-        )
-        conn.commit()
-    finally:
-        conn.close()
+    db_store.set_admin_setting(key, value)
 
 
 def _hash_password(password, salt=None):
@@ -108,37 +80,18 @@ def _require_admin_password(password):
     return False, "Invalid password"
 
 
-def _ensure_prompt_history_file():
-    os.makedirs(os.path.dirname(PROMPT_HISTORY_PATH), exist_ok=True)
-    if not os.path.exists(PROMPT_HISTORY_PATH):
-        with open(PROMPT_HISTORY_PATH, 'w', encoding='utf-8') as f:
-            f.write('[]')
-
-
 def _read_prompt_history():
-    _ensure_prompt_history_file()
-    try:
-        with open(PROMPT_HISTORY_PATH, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return data if isinstance(data, list) else []
-    except Exception:
-        return []
+    return list(reversed(db_store.read_prompt_history(limit=5000)))
 
 
 def _write_prompt_history(history):
-    os.makedirs(os.path.dirname(PROMPT_HISTORY_PATH), exist_ok=True)
-    tmp_path = PROMPT_HISTORY_PATH + '.tmp'
-    with open(tmp_path, 'w', encoding='utf-8') as f:
-        json.dump(history, f, indent=2, ensure_ascii=False)
-    os.replace(tmp_path, PROMPT_HISTORY_PATH)
+    # Prompt history is append-only in PostgreSQL. This function remains for
+    # compatibility with older call sites.
+    return None
 
 
 def _append_prompt_history_entry(entry):
-    history = _read_prompt_history()
-    history.append(entry)
-    if len(history) > 5000:
-        history = history[-5000:]
-    _write_prompt_history(history)
+    db_store.append_prompt_history(entry)
 
 
 def _safe_text(value):
@@ -199,48 +152,19 @@ def _parse_nco_2004(value, required=False):
 
 
 def _load_csv_rows():
-    if not os.path.exists(CSV_PATH):
-        raise FileNotFoundError(f"Missing CSV: {CSV_PATH}")
-    with open(CSV_PATH, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
-        fieldnames = reader.fieldnames or []
-
-    required_fields = [
-        "S No",
-        "Occupational Title",
-        "NCO 2015",
-        "NCO 2004",
-        "Division",
-        "Sub Division",
-        "Group",
-        "Family",
-        "Division Description",
-        "Sub Division Description",
-        "Group Description",
-        "Family Description",
-        "Occupation Description",
-    ]
-    for field in required_fields:
-        if field not in fieldnames:
-            fieldnames.append(field)
-    return fieldnames, rows
+    return db_store.load_csv_rows()
 
 
 def _write_csv_rows(fieldnames, rows):
-    os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
-    tmp_path = CSV_PATH + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-    os.replace(tmp_path, CSV_PATH)
+    # Occupations are now stored directly in PostgreSQL through insert/update/delete helpers.
+    return None
 
 
 def _build_documents_and_metadata(rows):
     documents = []
     metadata = []
     for idx, row in enumerate(rows):
+        row_id = int(row.get("_row_id") or idx)
         doc = f"""
 Occupation Title: {_safe_text(row.get('Occupational Title'))}
 NCO 2015 Code: {_safe_text(row.get('NCO 2015'))}
@@ -262,7 +186,7 @@ Group Description:
 """.strip()
         documents.append(doc)
         metadata.append({
-            "row_id": idx,
+            "row_id": row_id,
             "nco_2015": _safe_text(row.get("NCO 2015")),
             "occupation_title": _safe_text(row.get("Occupational Title")),
         })
@@ -270,15 +194,9 @@ Group Description:
 
 
 def _rebuild_search_assets(rows):
-    # Rebuild processed JSON files
     documents, metadata = _build_documents_and_metadata(rows)
-    os.makedirs(os.path.dirname(DOCUMENTS_PATH), exist_ok=True)
-    with open(DOCUMENTS_PATH, "w", encoding="utf-8") as f:
-        json.dump(documents, f, indent=2, ensure_ascii=False)
-    with open(METADATA_PATH, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, indent=2, ensure_ascii=False)
+    db_store.save_search_documents(documents, metadata)
 
-    # Rebuild graph keywords
     gn = {}
     for idx, item in enumerate(metadata):
         code = item["nco_2015"]
@@ -293,10 +211,8 @@ def _rebuild_search_assets(rows):
                     sector = line.split(":", 1)[1].strip().title()
                     break
         gn[code] = {"sector": sector, "keywords": keywords}
-    with open(GN_PATH, "w", encoding="utf-8") as f:
-        json.dump(gn, f, indent=2, ensure_ascii=False)
+    db_store.save_graph(gn)
 
-    # Rebuild embeddings and FAISS index
     from sentence_transformers import SentenceTransformer
     import numpy as np
     import faiss
@@ -308,14 +224,15 @@ def _rebuild_search_assets(rows):
         convert_to_numpy=True,
         normalize_embeddings=True,
     )
-    os.makedirs(os.path.dirname(EMBEDDINGS_PATH), exist_ok=True)
-    np.save(EMBEDDINGS_PATH, embeddings)
+    db_store.save_embeddings(embeddings)
 
     dim = embeddings.shape[1]
     index = faiss.IndexFlatIP(dim)
     index.add(embeddings)
-    os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
-    faiss.write_index(index, INDEX_PATH)
+    serialized_index = faiss.serialize_index(index)
+    db_store.save_asset("nco_faiss.index", bytes(serialized_index), "application/x-faiss")
+    if hasattr(search_module, "reload_from_db"):
+        search_module.reload_from_db()
 
 
 def _build_result_from_row(row, row_id):
@@ -347,7 +264,7 @@ def _search_by_nco_code(nco_query):
     results = []
     for idx, row in enumerate(rows):
         if _normalize_nco_code(row.get("NCO 2015")) == code:
-            results.append(_build_result_from_row(row, idx))
+            results.append(_build_result_from_row(row, int(row.get("_row_id") or idx)))
     return results
 
 @app.route('/')
@@ -539,11 +456,8 @@ def get_prompt_history():
             limit = 100
         limit = max(1, min(limit, 500))
 
-        history = _read_prompt_history()
-        history = list(reversed(history))
-        if occupation_title:
-            history = [h for h in history if h.get('occupation_title') == occupation_title]
-        return jsonify(history[:limit])
+        history = db_store.read_prompt_history(limit=limit, occupation_title=occupation_title)
+        return jsonify(history)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -554,7 +468,7 @@ def get_occupations():
         occupations = []
         for idx, row in enumerate(rows):
             occupations.append({
-                "row_id": idx,
+                "row_id": int(row.get("_row_id") or idx),
                 "s_no": _safe_text(row.get("S No")),
                 "occupation_title": _safe_text(row.get("Occupational Title")),
                 "nco_code": _safe_text(row.get("NCO 2015")),
@@ -582,7 +496,8 @@ def update_occupation(row_id):
             return jsonify({"success": False, "error": "No data provided"}), 400
 
         fieldnames, rows = _load_csv_rows()
-        if row_id < 0 or row_id >= len(rows):
+        existing_row = next((r for r in rows if int(r.get("_row_id") or -1) == row_id), None)
+        if not existing_row:
             return jsonify({"success": False, "error": "Occupation not found"}), 404
 
         ok, err = _require_admin_password(data.get("admin_password"))
@@ -613,15 +528,15 @@ def update_occupation(row_id):
         if nco_2015_err:
             return jsonify({"success": False, "error": nco_2015_err}), 400
 
-        existing_nco2004 = _safe_text(rows[row_id].get("NCO 2004"))
+        existing_nco2004 = _safe_text(existing_row.get("NCO 2004"))
         incoming_nco2004 = data.get("nco_2004_code", existing_nco2004)
         required_2004 = bool(existing_nco2004)
         new_nco_2004, nco_2004_err = _parse_nco_2004(incoming_nco2004, required=required_2004)
         if nco_2004_err:
             return jsonify({"success": False, "error": nco_2004_err}), 400
 
-        for i, r in enumerate(rows):
-            if i == row_id:
+        for r in rows:
+            if int(r.get("_row_id") or -1) == row_id:
                 continue
             if _normalize_nco_code(r.get("NCO 2015")) == new_nco:
                 return jsonify({
@@ -635,7 +550,7 @@ def update_occupation(row_id):
                     "error": f"NCO 2004 code already exists: {new_nco_2004}"
                 }), 400
 
-        row = rows[row_id]
+        row = dict(existing_row)
         row["Occupational Title"] = occupation_title
         row["NCO 2015"] = new_nco
         row["NCO 2004"] = new_nco_2004 if required_2004 else _safe_text(row.get("NCO 2004", ""))
@@ -649,9 +564,9 @@ def update_occupation(row_id):
         row["Division Description"] = _safe_text(data.get("division_description", row.get("Division Description", "")))
         row["Sub Division Description"] = _safe_text(data.get("sub_division_description", row.get("Sub Division Description", "")))
 
-        rows[row_id] = row
-        _write_csv_rows(fieldnames, rows)
-        _rebuild_search_assets(rows)
+        db_store.update_occupation(row_id, row)
+        _, rebuilt_rows = _load_csv_rows()
+        _rebuild_search_assets(rebuilt_rows)
 
         return jsonify({"success": True, "message": "Occupation updated successfully"})
     
@@ -711,16 +626,8 @@ def add_occupation():
                     "error": f"NCO 2004 code already exists: {new_nco_2004}"
                 }), 400
 
-        # Compute next S No
-        s_no = len(rows) + 1
-        try:
-            existing = [int(r.get("S No", "0") or 0) for r in rows]
-            s_no = max(existing) + 1 if existing else 1
-        except Exception:
-            s_no = len(rows) + 1
-
         new_row = {
-            "S No": str(s_no),
+            "S No": db_store.next_s_no(),
             "Occupational Title": occupation_title,
             "NCO 2015": new_nco,
             "NCO 2004": new_nco_2004,
@@ -735,11 +642,10 @@ def add_occupation():
             "Occupation Description": description,
         }
 
-        rows.append(new_row)
-        _write_csv_rows(fieldnames, rows)
-        _rebuild_search_assets(rows)
+        new_row_id = db_store.insert_occupation(new_row)
+        _, rebuilt_rows = _load_csv_rows()
+        _rebuild_search_assets(rebuilt_rows)
 
-        new_row_id = len(rows) - 1
         return jsonify({"success": True, "message": "Occupation added successfully", "row_id": new_row_id})
     
     except Exception as e:
@@ -754,12 +660,12 @@ def delete_occupation(row_id):
             return jsonify({"success": False, "error": err}), 403
 
         fieldnames, rows = _load_csv_rows()
-        if row_id < 0 or row_id >= len(rows):
+        if not any(int(r.get("_row_id") or -1) == row_id for r in rows):
             return jsonify({"success": False, "error": "Occupation not found"}), 404
 
-        rows.pop(row_id)
-        _write_csv_rows(fieldnames, rows)
-        _rebuild_search_assets(rows)
+        db_store.delete_occupation(row_id)
+        _, rebuilt_rows = _load_csv_rows()
+        _rebuild_search_assets(rebuilt_rows)
 
         return jsonify({"success": True, "message": "Occupation deleted successfully"})
     
@@ -791,13 +697,7 @@ def analytics_divisions():
 @app.route('/admin/api/analytics/confidence')
 def analytics_confidence():
     try:
-        history_file = os.path.join(os.path.dirname(__file__), 'data', 'processed', 'prompt_history.json')
-        if not os.path.exists(history_file):
-            return jsonify({"labels": [], "values": []})
-        
-        with open(history_file, 'r', encoding='utf-8') as f:
-            history = json.load(f)
-        
+        history = db_store.read_prompt_history(limit=5000)
         confidence_groups = {"High": 0, "Medium": 0, "Low": 0}
         
         for entry in history:
@@ -819,13 +719,7 @@ def analytics_confidence():
 @app.route('/admin/api/analytics/top-occupations')
 def analytics_top_occupations():
     try:
-        history_file = os.path.join(os.path.dirname(__file__), 'data', 'processed', 'prompt_history.json')
-        if not os.path.exists(history_file):
-            return jsonify({"labels": [], "values": []})
-        
-        with open(history_file, 'r', encoding='utf-8') as f:
-            history = json.load(f)
-        
+        history = db_store.read_prompt_history(limit=5000)
         occupation_counts = {}
         
         for entry in history:
@@ -845,13 +739,7 @@ def analytics_top_occupations():
 @app.route('/admin/api/analytics/search-trend')
 def analytics_search_trend():
     try:
-        history_file = os.path.join(os.path.dirname(__file__), 'data', 'processed', 'prompt_history.json')
-        if not os.path.exists(history_file):
-            return jsonify({"labels": [], "values": []})
-        
-        with open(history_file, 'r', encoding='utf-8') as f:
-            history = json.load(f)
-        
+        history = db_store.read_prompt_history(limit=5000)
         # Group by last 7 days
         from datetime import datetime, timedelta
         trend_data = {}
@@ -887,13 +775,7 @@ def analytics_search_trend():
 @app.route('/admin/api/analytics/languages')
 def analytics_languages():
     try:
-        history_file = os.path.join(os.path.dirname(__file__), 'data', 'processed', 'prompt_history.json')
-        if not os.path.exists(history_file):
-            return jsonify({"labels": [], "values": []})
-        
-        with open(history_file, 'r', encoding='utf-8') as f:
-            history = json.load(f)
-        
+        history = db_store.read_prompt_history(limit=5000)
         language_counts = {}
         
         for entry in history:
@@ -910,13 +792,7 @@ def analytics_languages():
 @app.route('/admin/api/analytics/low-confidence')
 def analytics_low_confidence():
     try:
-        history_file = os.path.join(os.path.dirname(__file__), 'data', 'processed', 'prompt_history.json')
-        if not os.path.exists(history_file):
-            return jsonify([])
-        
-        with open(history_file, 'r', encoding='utf-8') as f:
-            history = json.load(f)
-        
+        history = db_store.read_prompt_history(limit=5000)
         low_confidence = []
         
         for entry in history:

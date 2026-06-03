@@ -1013,5 +1013,148 @@
     "top_k": 20,
     "returned_count": 20,
     "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-01T05:50:53.922460+00:00",
+    "query": "man",
+    "translated_query": "why is it bisaya",
+    "was_translated": true,
+    "occupation_title": "Hawker",
+    "nco_code": "9520.0100",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T07:17:19.409032+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T07:17:37.755052+00:00",
+    "query": "ab",
+    "translated_query": "ab",
+    "was_translated": false,
+    "occupation_title": "Analyst",
+    "nco_code": "2511.0105",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T07:18:40.259723+00:00",
+    "query": "gg",
+    "translated_query": "gg",
+    "was_translated": false,
+    "occupation_title": "Glazer",
+    "nco_code": "7223.2100",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T07:19:31.251196+00:00",
+    "query": "ab",
+    "translated_query": "ab",
+    "was_translated": false,
+    "occupation_title": "Analyst",
+    "nco_code": "2511.0105",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T07:20:04.545277+00:00",
+    "query": "a",
+    "translated_query": "a",
+    "was_translated": false,
+    "occupation_title": "Ayah, Domestic",
+    "nco_code": "5311.0400",
+    "top_k": 5,
+    "returned_count": 5,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T07:20:14.609240+00:00",
+    "query": "a",
+    "translated_query": "a",
+    "was_translated": false,
+    "occupation_title": "Ayah, Domestic",
+    "nco_code": "5311.0400",
+    "top_k": 20,
+    "returned_count": 20,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T17:53:22.866469+00:00",
+    "query": "s",
+    "translated_query": "s",
+    "was_translated": false,
+    "occupation_title": "Snuff Maker",
+    "nco_code": "7516.1000",
+    "top_k": 100,
+    "returned_count": 100,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T17:53:26.399163+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 100,
+    "returned_count": 100,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T17:53:28.897053+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 100,
+    "returned_count": 100,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T17:54:04.046833+00:00",
+    "query": "st",
+    "translated_query": "st",
+    "was_translated": false,
+    "occupation_title": "Postman",
+    "nco_code": "4412.0200",
+    "top_k": 100,
+    "returned_count": 100,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T17:54:06.161335+00:00",
+    "query": "star",
+    "translated_query": "star",
+    "was_translated": false,
+    "occupation_title": "Astronomer",
+    "nco_code": "2111.0900",
+    "top_k": 100,
+    "returned_count": 100,
+    "client_ip": "127.0.0.1"
+  },
+  {
+    "ts": "2026-06-02T17:54:06.862603+00:00",
+    "query": "sta",
+    "translated_query": "STA",
+    "was_translated": false,
+    "occupation_title": "Postman",
+    "nco_code": "4412.0200",
+    "top_k": 100,
+    "returned_count": 100,
+    "client_ip": "127.0.0.1"
   }
 ]

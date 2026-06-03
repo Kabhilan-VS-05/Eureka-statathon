@@ -1,13 +1,16 @@
-import json
 import re
 import os
+import sys
 from collections import Counter
 
-# Load the metadata to analyze occupation titles
 script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(script_dir, 'data', 'processed', 'nco_metadata.json')
-with open(data_path, 'r', encoding='utf-8') as f:
-    metadata = json.load(f)
+if script_dir not in sys.path:
+    sys.path.append(script_dir)
+
+import db_store
+
+# Load the metadata to analyze occupation titles
+_, metadata = db_store.load_search_documents()
 
 print(f'Total occupations: {len(metadata)}')
 

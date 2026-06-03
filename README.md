@@ -15,17 +15,27 @@ The application has two major surfaces:
 - Admin CRUD with strict format/duplicate validations:
   - NCO 2015: `XXXX.XXXX`
   - NCO 2004: `XXXX.XX`
+- PostgreSQL-backed storage for occupations, admin settings, prompt history, semantic documents, graph data, embeddings, and FAISS index bytes
 
 ## Quick Start
-1. Install dependencies:
+1. Create a PostgreSQL database, for example `statathon_nco`.
+2. Set the database URL:
+   ```bash
+   set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/statathon_nco
+   ```
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-2. Run server:
+4. Import the current CSV/JSON/SQLite data and build search assets:
+   ```bash
+   python scripts/migrate_to_postgres.py
+   ```
+5. Run server:
    ```bash
    python app.py
    ```
-3. Open:
+6. Open:
    - `http://127.0.0.1:5000/`
    - `http://127.0.0.1:5000/admin`
 

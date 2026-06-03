@@ -91,6 +91,55 @@
         flex: 0 0 300px;
       }
 
+      .analytics-controls {
+        background: #f8fafc;
+        border: 1px solid var(--border-gray);
+        border-radius: 6px;
+        padding: 18px;
+        margin-bottom: 20px;
+      }
+
+      .analytics-control-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        align-items: end;
+      }
+
+      .analytics-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .metric-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .metric-tile {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 12px 14px;
+      }
+
+      .metric-value {
+        color: #0b3d91;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .metric-label {
+        color: #6b7280;
+        font-size: 12px;
+        margin-top: 3px;
+      }
+
       .table-card {
         background: var(--white);
         border: 1px solid var(--border-gray);
@@ -284,6 +333,11 @@
           grid-template-columns: 1fr;
         }
 
+        .analytics-control-grid,
+        .metric-strip {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .chart-card {
           height: 340px;
           min-height: 340px;
@@ -304,6 +358,113 @@
         margin-bottom: 25px;
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      }
+
+      .section-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e9ecef;
+      }
+
+      .section-header-row .section-title {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+
+      .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .search-row {
+        display: grid;
+        grid-template-columns: minmax(260px, 1fr) 220px;
+        gap: 12px;
+        align-items: end;
+      }
+
+      .search-status {
+        margin-top: 8px;
+        color: #6b7280;
+        font-size: 13px;
+        min-height: 20px;
+      }
+
+      .multi-select {
+        position: relative;
+      }
+
+      .multi-select-display {
+        min-height: 42px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .multi-select-display::after {
+        content: "\f107";
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        color: #6b7280;
+      }
+
+      .multi-select-menu {
+        display: none;
+        position: absolute;
+        z-index: 50;
+        left: 0;
+        right: 0;
+        top: calc(100% + 4px);
+        max-height: 260px;
+        overflow: auto;
+        background: #fff;
+        border: 1px solid #cfd6df;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      }
+
+      .multi-select:hover .multi-select-menu,
+      .multi-select.open .multi-select-menu {
+        display: block;
+      }
+
+      .multi-select-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 9px 10px;
+        font-size: 13px;
+        color: #333;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f3f5;
+      }
+
+      .multi-select-option:hover {
+        background: #eef4fb;
+      }
+
+      .multi-select-option input {
+        margin-top: 3px;
+        accent-color: #003366;
+      }
+
+      @media (max-width: 992px) {
+        .filter-grid,
+        .search-row {
+          grid-template-columns: 1fr;
+        }
+
+        .section-header-row {
+          align-items: stretch;
+          flex-direction: column;
+        }
       }
 
       .form-group {
@@ -613,6 +774,276 @@
         display: block;
       }
 
+      /* Government-style admin refinement */
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        color: #333;
+      }
+
+      .site-header {
+        background: #fff;
+        border-bottom: 1px solid #ddd;
+        box-shadow: none;
+      }
+
+      .header-main {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 5%;
+      }
+
+      .logo-container {
+        gap: 0;
+      }
+
+      .logo {
+        height: 60px;
+        margin-right: 15px;
+      }
+
+      .logo-text .main-title {
+        color: #333;
+        display: block;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+
+      .logo-text .sub-title {
+        color: #555;
+        display: block;
+        font-size: 14px;
+      }
+
+      .header-logos-right img {
+        height: 120px;
+        width: auto;
+      }
+
+      .main-nav {
+        background: #003366;
+        border-top: 0;
+      }
+
+      .nav-list {
+        padding: 0 5%;
+        max-width: none;
+      }
+
+      .nav-list li {
+        border-right: 0;
+      }
+
+      .nav-list a {
+        padding: 15px 20px;
+        font-size: 16px;
+        font-weight: 400;
+      }
+
+      .nav-list a:hover,
+      .nav-list a.active {
+        background: #004080;
+      }
+
+      .container {
+        width: 90%;
+        max-width: 1400px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border: 0;
+        border-radius: 0;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .page-title {
+        color: #003366;
+        font-size: 26px;
+        font-weight: 700;
+        text-align: left;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 10px;
+        margin-bottom: 22px;
+      }
+
+      .tabs {
+        margin-bottom: 22px;
+      }
+
+      .tab-buttons {
+        background: #f8fafc;
+        border: 1px solid #ddd;
+        border-bottom: 2px solid #003366;
+        border-radius: 0;
+      }
+
+      .tab-button {
+        color: #333;
+        padding: 13px 22px;
+        font-size: 14px;
+        border-right: 1px solid #ddd;
+        border-bottom: 0;
+        top: 0;
+      }
+
+      .tab-button:hover {
+        color: #003366;
+        background: #eef4fb;
+      }
+
+      .tab-button.active {
+        color: #fff;
+        background: #003366;
+        border-bottom: 0;
+      }
+
+      .section-title {
+        color: #003366;
+        font-size: 20px;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .analytics-controls,
+      .search-form {
+        background: #f8fafc;
+        border: 1px solid #ddd;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .form-label {
+        color: #333;
+        font-size: 13px;
+      }
+
+      .form-control {
+        border: 1px solid #cfd6df;
+        border-radius: 3px;
+        padding: 10px 12px;
+        color: #333;
+      }
+
+      .form-control:focus {
+        border-color: #003366;
+        box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.12);
+      }
+
+      .metric-tile,
+      .chart-card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-top: 3px solid #003366;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .metric-value,
+      .chart-card .chart-title {
+        color: #003366;
+      }
+
+      .chart-card {
+        height: 360px;
+        min-height: 360px;
+        max-height: 360px;
+      }
+
+      .chart-card canvas {
+        height: 280px !important;
+        max-height: 280px;
+        flex-basis: 280px;
+      }
+
+      .btn {
+        border-radius: 3px;
+        box-shadow: none;
+        margin-right: 6px;
+        padding: 10px 18px;
+        font-weight: 600;
+      }
+
+      .btn:hover {
+        box-shadow: none;
+        transform: none;
+      }
+
+      .btn-primary,
+      .btn.btn-primary {
+        background: #003366;
+      }
+
+      .btn-primary:hover,
+      .btn.btn-primary:hover {
+        background: #004080;
+      }
+
+      .btn-success {
+        background: #1f7a3f;
+      }
+
+      .btn-success:hover {
+        background: #176332;
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+      }
+
+      .section-header-row {
+        border-bottom: 2px solid #ddd;
+      }
+
+      .data-table {
+        border: 1px solid #ddd;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .data-table th {
+        background: #003366;
+        color: #fff;
+        font-size: 13px;
+        letter-spacing: 0;
+        text-transform: none;
+      }
+
+      .data-table td {
+        color: #333;
+      }
+
+      .data-table tr:nth-child(even) {
+        background: #f8fafc;
+      }
+
+      .data-table tr:hover {
+        background: #eef4fb;
+      }
+
+      .pagination a {
+        border: 1px solid #cfd6df;
+        border-radius: 3px;
+        color: #003366;
+      }
+
+      .pagination a:hover,
+      .pagination .active a,
+      .pagination a.active {
+        background: #003366;
+        border-color: #003366;
+        color: #fff;
+        transform: none;
+      }
+
+      .modal-content {
+        border-radius: 0;
+      }
+
+      .modal-header {
+        background: #003366;
+      }
+
       @media (max-width: 768px) {
         .header-main {
           flex-direction: column;
@@ -635,6 +1066,11 @@
         .container {
           width: 100%;
           padding: 10px;
+        }
+
+        .analytics-control-grid,
+        .metric-strip {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -689,16 +1125,102 @@
       <div id="analytics-tab" class="tab-content active">
         <div class="section">
           <h2 class="section-title">Real-Time Analytics</h2>
+          <div class="analytics-controls">
+            <div class="analytics-control-grid">
+              <div class="form-group">
+                <label class="form-label">Date Range</label>
+                <select id="analyticsDateRange" class="form-control" onchange="applyAnalyticsControls()">
+                  <option value="7">Last 7 days</option>
+                  <option value="30">Last 30 days</option>
+                  <option value="90">Last 90 days</option>
+                  <option value="all" selected>All history</option>
+                  <option value="custom">Custom dates</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Start Date</label>
+                <input type="date" id="analyticsStartDate" class="form-control" onchange="applyAnalyticsControls()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">End Date</label>
+                <input type="date" id="analyticsEndDate" class="form-control" onchange="applyAnalyticsControls()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Group Trend By</label>
+                <select id="analyticsGroupBy" class="form-control" onchange="applyAnalyticsControls()">
+                  <option value="day">Day</option>
+                  <option value="week">Week</option>
+                  <option value="month">Month</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Query Contains</label>
+                <input type="text" id="analyticsQueryFilter" class="form-control" placeholder="Type keyword..." oninput="applyAnalyticsControls()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Matched Occupation</label>
+                <select id="analyticsOccupationFilter" class="form-control" onchange="applyAnalyticsControls()">
+                  <option value="">All occupations</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Matched Division</label>
+                <select id="analyticsDivisionFilter" class="form-control" onchange="applyAnalyticsControls()">
+                  <option value="">All divisions</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Outcome</label>
+                <select id="analyticsOutcomeFilter" class="form-control" onchange="applyAnalyticsControls()">
+                  <option value="">All outcomes</option>
+                  <option value="success">Successful</option>
+                  <option value="empty">No result</option>
+                  <option value="translated">Translated</option>
+                  <option value="original">Original language</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Top-N Bars</label>
+                <input type="number" id="analyticsTopN" class="form-control" min="3" max="20" value="10" onchange="applyAnalyticsControls()" />
+              </div>
+              <div class="form-group analytics-actions">
+                <button class="btn btn-primary" onclick="applyAnalyticsControls()">
+                  <i class="fas fa-filter"></i> Apply
+                </button>
+                <button class="btn btn-secondary" onclick="resetAnalyticsControls()">
+                  <i class="fas fa-rotate-left"></i> Reset
+                </button>
+              </div>
+            </div>
+            <div class="metric-strip">
+              <div class="metric-tile">
+                <div class="metric-value" id="analyticsMetricSearches">0</div>
+                <div class="metric-label">Filtered Searches</div>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-value" id="analyticsMetricSuccess">0%</div>
+                <div class="metric-label">Success Rate</div>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-value" id="analyticsMetricTranslated">0%</div>
+                <div class="metric-label">Translated Share</div>
+              </div>
+              <div class="metric-tile">
+                <div class="metric-value" id="analyticsMetricOccupations">0</div>
+                <div class="metric-label">Unique Occupations</div>
+              </div>
+            </div>
+          </div>
           <div class="chart-grid">
             <!-- Chart 1: Search Volume Trend -->
             <div class="chart-card">
-              <div class="chart-title">Search Volume Trend (7 Days)</div>
+              <div class="chart-title" id="searchVolumeTrendTitle">Search Volume Trend</div>
               <canvas id="searchVolumeTrendChart"></canvas>
             </div>
 
             <!-- Chart 2: Top 10 Searches -->
             <div class="chart-card">
-              <div class="chart-title">Top 10 Search Queries</div>
+              <div class="chart-title" id="topSearchesTitle">Top Search Queries</div>
               <canvas id="topSearchesChart"></canvas>
             </div>
 
@@ -710,19 +1232,19 @@
 
             <!-- Chart 4: Language Distribution -->
             <div class="chart-card">
-              <div class="chart-title">Language Distribution</div>
+              <div class="chart-title">Translation Usage</div>
               <canvas id="languageDistributionChart"></canvas>
             </div>
 
             <!-- Chart 5: Top 10 Occupations Found -->
             <div class="chart-card">
-              <div class="chart-title">Top 10 Occupations Found</div>
+              <div class="chart-title" id="topOccupationsTitle">Top Matched Occupations</div>
               <canvas id="topOccupationsChart"></canvas>
             </div>
 
-            <!-- Chart 6: Average Confidence Trend -->
+            <!-- Chart 6: NCO Division Demand -->
             <div class="chart-card">
-              <div class="chart-title">Average Confidence Score (7 Days)</div>
+              <div class="chart-title">NCO Division Demand</div>
               <canvas id="confidenceTrendChart"></canvas>
             </div>
           </div>
@@ -740,30 +1262,58 @@
       <!-- Database Management Tab -->
       <div id="database-tab" class="tab-content">
         <div class="section">
-          <h2 class="section-title">Occupation Database Management</h2>
+          <div class="section-header-row">
+            <h2 class="section-title">Occupation Database Management</h2>
+            <button class="btn btn-success" onclick="showAddModal()">
+              <i class="fas fa-plus"></i> Add New Occupation
+            </button>
+          </div>
           
           <div class="search-form">
-            <div class="form-group">
-              <label class="form-label">Search Occupations:</label>
-              <input type="text" id="searchInput" class="form-control" placeholder="Enter occupation title or keywords..." onkeyup="searchOccupations()" />
+            <div class="search-row">
+              <div class="form-group">
+                <label class="form-label">Search Occupations:</label>
+                <input type="text" id="searchInput" class="form-control" placeholder="Enter occupation title or keywords..." onkeyup="searchOccupations()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Search Mode:</label>
+                <select id="adminSearchMode" class="form-control" onchange="searchOccupations()">
+                  <option value="normal">Normal table search</option>
+                  <option value="semantic">Semantic search</option>
+                </select>
+              </div>
             </div>
-            <div style="display: flex; gap: 10px;">
-              <div class="form-group" style="flex: 1;">
+            <div class="filter-grid">
+              <div class="form-group">
                 <label class="form-label">Division:</label>
-                <select id="divisionFilter" class="form-control" onchange="filterOccupations()">
-                  <option value="">All Divisions</option>
-                </select>
+                <div class="multi-select" id="divisionFilter">
+                  <div class="form-control multi-select-display" onclick="toggleMultiSelect('divisionFilter')">All Divisions</div>
+                  <div class="multi-select-menu"></div>
+                </div>
               </div>
-              <div class="form-group" style="flex: 1;">
+              <div class="form-group">
+                <label class="form-label">Sub Division:</label>
+                <div class="multi-select" id="subDivisionFilter">
+                  <div class="form-control multi-select-display" onclick="toggleMultiSelect('subDivisionFilter')">All Sub Divisions</div>
+                  <div class="multi-select-menu"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Group:</label>
+                <div class="multi-select" id="groupFilter">
+                  <div class="form-control multi-select-display" onclick="toggleMultiSelect('groupFilter')">All Groups</div>
+                  <div class="multi-select-menu"></div>
+                </div>
+              </div>
+              <div class="form-group">
                 <label class="form-label">Family:</label>
-                <select id="familyFilter" class="form-control" onchange="filterOccupations()">
-                  <option value="">All Families</option>
-                </select>
+                <div class="multi-select" id="familyFilter">
+                  <div class="form-control multi-select-display" onclick="toggleMultiSelect('familyFilter')">All Families</div>
+                  <div class="multi-select-menu"></div>
+                </div>
               </div>
             </div>
-            <div style="margin-top: 15px;">
-              <button class="btn btn-success" onclick="showAddModal()">Add New Occupation</button>
-            </div>
+            <div id="adminSearchStatus" class="search-status"></div>
           </div>
 
           <table class="data-table">
@@ -773,6 +1323,8 @@
                 <th>Occupation Title</th>
                 <th>NCO Code</th>
                 <th>Division</th>
+                <th>Sub Division</th>
+                <th>Group</th>
                 <th>Family</th>
                 <th>Actions</th>
               </tr>
@@ -1070,6 +1622,11 @@
       let currentHistoryOccupationTitle = "";
       let currentHistoryRows = [];
       let currentSearchTerm = "";
+      let semanticSearchResults = [];
+      let semanticSearchTimer = null;
+      let semanticSearchRequestId = 0;
+      let allAnalyticsHistory = [];
+      let analyticsControlTimer = null;
       const charts = window.charts;
 
       // Initialize dashboard on page load
@@ -1153,6 +1710,9 @@
             console.log("DEBUG: Table displayed");
             updateChartsData();
             console.log("DEBUG: Charts updated");
+            if (allAnalyticsHistory.length) {
+              updateSearchAnalyticsCharts(allAnalyticsHistory);
+            }
           })
           .catch((error) => {
             console.error("Error loading occupations:", error);
@@ -1403,43 +1963,35 @@
           });
         }
 
-        // 6. Average Confidence Trend Chart
+        // 6. NCO Division Demand Chart
         const ctxConfidence = document.getElementById('confidenceTrendChart');
         if (ctxConfidence && !charts.confidenceTrendChart) {
           charts.confidenceTrendChart = new Chart(ctxConfidence, {
-            type: 'line',
+            type: 'bar',
             data: {
               labels: [],
               datasets: [{
-                label: 'Avg Confidence Score',
+                label: 'Search Matches',
                 data: [],
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.05)',
-                borderWidth: 2,
-                tension: 0.4,
-                fill: true,
-                pointBackgroundColor: '#10b981',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 5,
-                yAxisID: 'y'
+                backgroundColor: '#10b981',
+                borderColor: '#047857',
+                borderWidth: 1
               }]
             },
             options: {
+              indexAxis: 'y',
               responsive: true,
               maintainAspectRatio: false,
               plugins: {
                 legend: { display: false }
               },
               scales: {
-                y: {
+                x: {
                   beginAtZero: true,
-                  min: 0,
-                  max: 1,
-                  ticks: { color: '#6b7280', callback: (value) => (value * 100).toFixed(0) + '%' },
+                  ticks: { stepSize: 1, color: '#6b7280' },
                   grid: { color: '#e5e7eb' }
                 },
-                x: {
+                y: {
                   ticks: { color: '#6b7280' },
                   grid: { display: false }
                 }
@@ -1461,73 +2013,56 @@
           return;
         }
 
-        console.log("DEBUG: Updating charts with", historyData.length, "history entries");
+        allAnalyticsHistory = historyData;
+        populateAnalyticsFilterOptions();
+        const filteredHistory = getFilteredAnalyticsHistory(historyData);
+        const topN = getAnalyticsTopN();
+        const groupBy = document.getElementById("analyticsGroupBy")?.value || "day";
 
-        // ===== CHART 1: Search Volume Trend (7-Day Line Chart) =====
-        const last7Days = [];
-        const searchCounts = [];
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          const dateStr = date.toLocaleDateString('en-US', { weekday: 'short' });
-          last7Days.push(dateStr);
-          
-          const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-          const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
-          
-          const daySearches = historyData.filter(entry => {
-            const entryDate = new Date(entry.ts);
-            return entryDate >= dayStart && entryDate <= dayEnd;
-          }).length;
-          
-          searchCounts.push(daySearches);
-        }
+        console.log("DEBUG: Updating charts with", filteredHistory.length, "filtered history entries");
+
+        updateAnalyticsMetricTiles(filteredHistory);
+
+        // ===== CHART 1: Search Volume Trend =====
+        const trendCounts = countByTimeBucket(filteredHistory, groupBy);
+        const trendEntries = Object.entries(trendCounts);
 
         if (charts.searchVolumeTrendChart) {
-          charts.searchVolumeTrendChart.data.labels = last7Days;
-          charts.searchVolumeTrendChart.data.datasets[0].data = searchCounts;
+          charts.searchVolumeTrendChart.data.labels = trendEntries.map(([label]) => label);
+          charts.searchVolumeTrendChart.data.datasets[0].data = trendEntries.map(([, count]) => count);
           charts.searchVolumeTrendChart.update();
         }
+        setTextContent("searchVolumeTrendTitle", `Search Volume Trend by ${capitalize(groupBy)}`);
 
-        // ===== CHART 2: Top 10 Searches (Bar Chart) =====
-        const searchQueryCounts = {};
-        historyData.forEach(entry => {
-          if (entry.query) {
-            searchQueryCounts[entry.query] = (searchQueryCounts[entry.query] || 0) + 1;
-          }
-        });
-
-        const topSearches = Object.entries(searchQueryCounts)
-          .sort(([,a], [,b]) => b - a)
-          .slice(0, 10);
+        // ===== CHART 2: Top Search Queries =====
+        const topSearches = topCounts(filteredHistory, (entry) => entry.query, topN);
 
         if (charts.topSearchesChart) {
-          charts.topSearchesChart.data.labels = topSearches.map(([query]) => 
-            query.substring(0, 35) + (query.length > 35 ? '...' : '')
-          );
+          charts.topSearchesChart.data.labels = topSearches.map(([query]) => truncateLabel(query, 35));
           charts.topSearchesChart.data.datasets[0].data = topSearches.map(([, count]) => count);
           charts.topSearchesChart.update();
         }
+        setTextContent("topSearchesTitle", `Top ${topN} Search Queries`);
 
-        // ===== CHART 3: Search Success Rate (Doughnut Chart) =====
-        const successfulSearches = historyData.filter(entry => entry.returned_count && entry.returned_count > 0).length;
-        const totalSearches = historyData.length;
+        // ===== CHART 3: Search Outcome =====
+        const successfulSearches = filteredHistory.filter(isSuccessfulAnalyticsEntry).length;
+        const totalSearches = filteredHistory.length;
         const unsuccessfulSearches = totalSearches - successfulSearches;
-        const successRate = totalSearches > 0 ? ((successfulSearches / totalSearches) * 100).toFixed(1) : 0;
+        const successRate = totalSearches > 0 ? (successfulSearches / totalSearches) * 100 : 0;
 
         if (charts.successRateChart) {
           charts.successRateChart.data.datasets[0].data = [successfulSearches, unsuccessfulSearches];
           charts.successRateChart.data.labels = [
-            `Successful (${successRate}%)`,
+            `Successful (${successRate.toFixed(1)}%)`,
             `No Results (${(100 - successRate).toFixed(1)}%)`
           ];
           charts.successRateChart.update();
         }
 
-        // ===== CHART 4: Language Distribution (Pie Chart) =====
+        // ===== CHART 4: Translation Usage =====
         const languageCounts = {
-          'English': historyData.filter(entry => !entry.was_translated).length,
-          'Translated': historyData.filter(entry => entry.was_translated).length
+          'Original': filteredHistory.filter(entry => !entry.was_translated).length,
+          'Translated': filteredHistory.filter(entry => entry.was_translated).length
         };
 
         if (charts.languageDistributionChart) {
@@ -1536,55 +2071,22 @@
           charts.languageDistributionChart.update();
         }
 
-        // ===== CHART 5: Top 10 Occupations Found (Bar Chart) =====
-        const occupationCounts = {};
-        historyData.forEach(entry => {
-          if (entry.occupation_title) {
-            occupationCounts[entry.occupation_title] = (occupationCounts[entry.occupation_title] || 0) + 1;
-          }
-        });
-
-        const topOccupations = Object.entries(occupationCounts)
-          .sort(([,a], [,b]) => b - a)
-          .slice(0, 10);
+        // ===== CHART 5: Top Matched Occupations =====
+        const topOccupations = topCounts(filteredHistory, (entry) => entry.occupation_title, topN);
 
         if (charts.topOccupationsChart) {
-          charts.topOccupationsChart.data.labels = topOccupations.map(([title]) => 
-            title.substring(0, 35) + (title.length > 35 ? '...' : '')
-          );
+          charts.topOccupationsChart.data.labels = topOccupations.map(([title]) => truncateLabel(title, 35));
           charts.topOccupationsChart.data.datasets[0].data = topOccupations.map(([, count]) => count);
           charts.topOccupationsChart.update();
         }
+        setTextContent("topOccupationsTitle", `Top ${topN} Matched Occupations`);
 
-        // ===== CHART 6: Average Confidence Trend (Area Chart) =====
-        const last7DaysConfidence = [];
-        const confidenceScores = [];
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          
-          const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-          const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
-          
-          const dayEntries = historyData.filter(entry => {
-            const entryDate = new Date(entry.ts);
-            return entryDate >= dayStart && entryDate <= dayEnd;
-          });
-          
-          if (dayEntries.length > 0) {
-            const successCount = dayEntries.filter(e => e.returned_count && e.returned_count > 0).length;
-            const avgConfidence = successCount / dayEntries.length;
-            confidenceScores.push(avgConfidence);
-          } else {
-            confidenceScores.push(0);
-          }
-          
-          last7DaysConfidence.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
-        }
+        // ===== CHART 6: NCO Division Demand =====
+        const topDivisions = topCounts(filteredHistory, (entry) => getAnalyticsEntryDivision(entry), topN);
 
         if (charts.confidenceTrendChart) {
-          charts.confidenceTrendChart.data.labels = last7DaysConfidence;
-          charts.confidenceTrendChart.data.datasets[0].data = confidenceScores;
+          charts.confidenceTrendChart.data.labels = topDivisions.map(([division]) => truncateLabel(division, 35));
+          charts.confidenceTrendChart.data.datasets[0].data = topDivisions.map(([, count]) => count);
           charts.confidenceTrendChart.update();
         }
 
@@ -1592,21 +2094,323 @@
         updateLastUpdateTime();
       }
 
+      function applyAnalyticsControls() {
+        clearTimeout(analyticsControlTimer);
+        analyticsControlTimer = setTimeout(() => {
+          updateSearchAnalyticsCharts(allAnalyticsHistory);
+        }, 120);
+      }
+
+      function resetAnalyticsControls() {
+        setControlValue("analyticsDateRange", "all");
+        setControlValue("analyticsStartDate", "");
+        setControlValue("analyticsEndDate", "");
+        setControlValue("analyticsGroupBy", "day");
+        setControlValue("analyticsQueryFilter", "");
+        setControlValue("analyticsOccupationFilter", "");
+        setControlValue("analyticsDivisionFilter", "");
+        setControlValue("analyticsOutcomeFilter", "");
+        setControlValue("analyticsTopN", "10");
+        updateSearchAnalyticsCharts(allAnalyticsHistory);
+      }
+
+      function getFilteredAnalyticsHistory(historyData) {
+        const dateRange = document.getElementById("analyticsDateRange")?.value || "all";
+        const queryFilter = (document.getElementById("analyticsQueryFilter")?.value || "").trim().toLowerCase();
+        const occupationFilter = document.getElementById("analyticsOccupationFilter")?.value || "";
+        const divisionFilter = document.getElementById("analyticsDivisionFilter")?.value || "";
+        const outcomeFilter = document.getElementById("analyticsOutcomeFilter")?.value || "";
+        const dateWindow = getAnalyticsDateWindow(dateRange);
+
+        return historyData.filter((entry) => {
+          const entryDate = parseAnalyticsDate(entry.ts);
+          if (!entryDate) return false;
+          if (dateWindow.start && entryDate < dateWindow.start) return false;
+          if (dateWindow.end && entryDate > dateWindow.end) return false;
+          if (queryFilter && !`${entry.query || ""} ${entry.translated_query || ""}`.toLowerCase().includes(queryFilter)) return false;
+          if (occupationFilter && (entry.occupation_title || "") !== occupationFilter) return false;
+          if (divisionFilter && getAnalyticsEntryDivision(entry) !== divisionFilter) return false;
+          if (outcomeFilter === "success" && !isSuccessfulAnalyticsEntry(entry)) return false;
+          if (outcomeFilter === "empty" && isSuccessfulAnalyticsEntry(entry)) return false;
+          if (outcomeFilter === "translated" && !entry.was_translated) return false;
+          if (outcomeFilter === "original" && entry.was_translated) return false;
+          return true;
+        });
+      }
+
+      function getAnalyticsDateWindow(dateRange) {
+        if (dateRange === "all") return { start: null, end: null };
+
+        if (dateRange === "custom") {
+          const startValue = document.getElementById("analyticsStartDate")?.value;
+          const endValue = document.getElementById("analyticsEndDate")?.value;
+          const start = startValue ? new Date(`${startValue}T00:00:00`) : null;
+          const end = endValue ? new Date(`${endValue}T23:59:59`) : null;
+          return { start, end };
+        }
+
+        const days = parseInt(dateRange, 10) || 7;
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - (days - 1));
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        return { start, end };
+      }
+
+      function populateAnalyticsFilterOptions() {
+        populateAnalyticsSelect(
+          "analyticsOccupationFilter",
+          "All occupations",
+          [...new Set(allAnalyticsHistory.map((entry) => entry.occupation_title).filter(Boolean))].sort()
+        );
+
+        const divisions = [...new Set(
+          allAnalyticsHistory
+            .map((entry) => getAnalyticsEntryDivision(entry))
+            .filter(Boolean)
+        )].sort();
+        populateAnalyticsSelect("analyticsDivisionFilter", "All divisions", divisions);
+      }
+
+      function populateAnalyticsSelect(selectId, allLabel, values) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const currentValue = select.value;
+        select.innerHTML = "";
+        select.appendChild(new Option(allLabel, ""));
+        values.forEach((value) => select.appendChild(new Option(value, value)));
+        if (values.includes(currentValue)) {
+          select.value = currentValue;
+        }
+      }
+
+      function updateAnalyticsMetricTiles(filteredHistory) {
+        const total = filteredHistory.length;
+        const successCount = filteredHistory.filter(isSuccessfulAnalyticsEntry).length;
+        const translatedCount = filteredHistory.filter((entry) => entry.was_translated).length;
+        const uniqueOccupations = new Set(filteredHistory.map((entry) => entry.occupation_title).filter(Boolean)).size;
+
+        setTextContent("analyticsMetricSearches", total.toLocaleString());
+        setTextContent("analyticsMetricSuccess", total ? `${((successCount / total) * 100).toFixed(1)}%` : "0%");
+        setTextContent("analyticsMetricTranslated", total ? `${((translatedCount / total) * 100).toFixed(1)}%` : "0%");
+        setTextContent("analyticsMetricOccupations", uniqueOccupations.toLocaleString());
+      }
+
+      function countByTimeBucket(historyData, groupBy) {
+        const counts = {};
+        historyData
+          .slice()
+          .sort((a, b) => parseAnalyticsDate(a.ts) - parseAnalyticsDate(b.ts))
+          .forEach((entry) => {
+            const date = parseAnalyticsDate(entry.ts);
+            if (!date) return;
+            const label = getTimeBucketLabel(date, groupBy);
+            counts[label] = (counts[label] || 0) + 1;
+          });
+        return counts;
+      }
+
+      function getTimeBucketLabel(date, groupBy) {
+        if (groupBy === "month") {
+          return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+        }
+        if (groupBy === "week") {
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          return weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        }
+        return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      }
+
+      function topCounts(items, selector, limit) {
+        const counts = {};
+        items.forEach((item) => {
+          const value = selector(item);
+          if (!value) return;
+          counts[value] = (counts[value] || 0) + 1;
+        });
+        return Object.entries(counts)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, limit);
+      }
+
+      function getAnalyticsEntryDivision(entry) {
+        const code = normalizeCodeForCompare(entry.nco_code || "");
+        const matchedOccupation = occupations.find((occupation) =>
+          normalizeCodeForCompare(occupation.nco_code) === code
+        );
+        return matchedOccupation ? matchedOccupation.division : "";
+      }
+
+      function isSuccessfulAnalyticsEntry(entry) {
+        if (typeof entry.returned_count === "number") return entry.returned_count > 0;
+        return Boolean(entry.occupation_title || entry.nco_code);
+      }
+
+      function parseAnalyticsDate(value) {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+
+      function getAnalyticsTopN() {
+        const value = parseInt(document.getElementById("analyticsTopN")?.value || "10", 10);
+        return Math.max(3, Math.min(value || 10, 20));
+      }
+
+      function truncateLabel(value, length) {
+        const text = String(value || "");
+        return text.length > length ? `${text.slice(0, length)}...` : text;
+      }
+
+      function setTextContent(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+      }
+
+      function setControlValue(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.value = value;
+      }
+
+      function capitalize(value) {
+        const text = String(value || "");
+        return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
+      }
+
       // Table functions
       function updateFilters() {
-        const divisions = [...new Set(occupations.map((occ) => occ.division).filter((d) => d))];
-        const divisionFilter = document.getElementById("divisionFilter");
-        divisionFilter.innerHTML = '<option value="">All Divisions</option>';
-        divisions.forEach((division) => {
-          divisionFilter.innerHTML += `<option value="${division}">${division}</option>`;
+        refreshSearchFilterOptions();
+      }
+
+      function getSearchFilterValues() {
+        return {
+          division: getMultiSelectValues("divisionFilter"),
+          sub_division: getMultiSelectValues("subDivisionFilter"),
+          group: getMultiSelectValues("groupFilter"),
+          family: getMultiSelectValues("familyFilter"),
+        };
+      }
+
+      function occupationMatchesSearchFilters(occupation, filters, skipField = "") {
+        return Object.entries(filters).every(([field, values]) => {
+          if (!values.length || field === skipField) return true;
+          return values.includes(occupation[field] || "");
+        });
+      }
+
+      function populateSearchFilter(selectId, allLabel, field, filters, changedId = "") {
+        const root = document.getElementById(selectId);
+        if (!root) return;
+        const menu = root.querySelector(".multi-select-menu");
+        if (!menu) return;
+
+        const currentValues = getMultiSelectValues(selectId);
+        menu.innerHTML = "";
+
+        const values = [...new Set(
+          occupations
+            .filter((occ) => occupationMatchesSearchFilters(occ, filters, field))
+            .map((occ) => occ[field])
+            .filter(Boolean)
+        )].sort();
+
+        values.forEach((value, index) => {
+          const optionId = `${selectId}-${index}`;
+          const label = document.createElement("label");
+          label.className = "multi-select-option";
+          label.innerHTML = `
+            <input type="checkbox" id="${optionId}" value="${escapeHtml(value)}" ${currentValues.includes(value) ? "checked" : ""} onchange="handleMultiSelectChange('${selectId}')" />
+            <span>${escapeHtml(value)}</span>
+          `;
+          menu.appendChild(label);
         });
 
-        const families = [...new Set(occupations.map((occ) => occ.family).filter((f) => f))];
-        const familyFilter = document.getElementById("familyFilter");
-        familyFilter.innerHTML = '<option value="">All Families</option>';
-        families.forEach((family) => {
-          familyFilter.innerHTML += `<option value="${family}">${family}</option>`;
+        if (selectId !== changedId) {
+          const validSelections = currentValues.filter((value) => values.includes(value));
+          setMultiSelectValues(selectId, validSelections);
+        }
+        updateMultiSelectDisplay(selectId, allLabel);
+      }
+
+      function refreshSearchFilterOptions(changedId = "") {
+        const filters = getSearchFilterValues();
+        populateSearchFilter("divisionFilter", "All Divisions", "division", filters, changedId);
+        populateSearchFilter("subDivisionFilter", "All Sub Divisions", "sub_division", filters, changedId);
+        populateSearchFilter("groupFilter", "All Groups", "group", filters, changedId);
+        populateSearchFilter("familyFilter", "All Families", "family", filters, changedId);
+      }
+
+      function updateSearchSubDivisionFilter() {
+        refreshSearchFilterOptions("divisionFilter");
+      }
+
+      function updateSearchGroupFilter() {
+        refreshSearchFilterOptions("subDivisionFilter");
+      }
+
+      function updateSearchFamilyFilter() {
+        refreshSearchFilterOptions("groupFilter");
+      }
+
+      function toggleMultiSelect(selectId) {
+        const root = document.getElementById(selectId);
+        if (!root) return;
+        document.querySelectorAll(".multi-select.open").forEach((select) => {
+          if (select.id !== selectId) select.classList.remove("open");
         });
+        root.classList.toggle("open");
+      }
+
+      function getMultiSelectValues(selectId) {
+        const root = document.getElementById(selectId);
+        if (!root) return [];
+        return Array.from(root.querySelectorAll(".multi-select-menu input:checked"))
+          .map((input) => input.value);
+      }
+
+      function setMultiSelectValues(selectId, values) {
+        const selectedValues = new Set(values);
+        const root = document.getElementById(selectId);
+        if (!root) return;
+        root.querySelectorAll(".multi-select-menu input").forEach((input) => {
+          input.checked = selectedValues.has(input.value);
+        });
+      }
+
+      function updateMultiSelectDisplay(selectId, allLabel) {
+        const root = document.getElementById(selectId);
+        const display = root?.querySelector(".multi-select-display");
+        if (!display) return;
+        const values = getMultiSelectValues(selectId);
+        if (!values.length) {
+          display.textContent = allLabel;
+        } else if (values.length === 1) {
+          display.textContent = values[0];
+        } else {
+          display.textContent = `${values.length} selected`;
+        }
+      }
+
+      function handleMultiSelectChange(selectId) {
+        const labelMap = {
+          divisionFilter: "All Divisions",
+          subDivisionFilter: "All Sub Divisions",
+          groupFilter: "All Groups",
+          familyFilter: "All Families",
+        };
+        updateMultiSelectDisplay(selectId, labelMap[selectId] || "All");
+        refreshSearchFilterOptions(selectId);
+        filterOccupations();
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
       }
 
       function displayTable() {
@@ -1625,6 +2429,8 @@
             <td>${occupation.occupation_title}</td>
             <td><span class="nco-code">${formatNcoCode(occupation.nco_code)}</span></td>
             <td>${occupation.division || "-"}</td>
+            <td>${occupation.sub_division || "-"}</td>
+            <td>${occupation.group || "-"}</td>
             <td>${occupation.family || "-"}</td>
             <td>
               <div class="action-buttons">
@@ -1657,6 +2463,7 @@
         if (!pagination) return;
 
         pagination.innerHTML = "";
+        if (totalPages === 0) return;
 
         // Previous button
         const prevLi = document.createElement("li");
@@ -1691,35 +2498,56 @@
       function searchOccupations() {
         currentSearchTerm = document.getElementById("searchInput").value.trim();
         currentPage = 1;
+        clearTimeout(semanticSearchTimer);
+        const mode = getAdminSearchMode();
+        if (mode === "semantic") {
+          semanticSearchTimer = setTimeout(() => applyFilters(), 250);
+          return;
+        }
         applyFilters();
       }
 
       function applyFilters() {
-        const divisionFilter = document.getElementById("divisionFilter").value;
-        const familyFilter = document.getElementById("familyFilter").value;
+        if (getAdminSearchMode() === "semantic" && currentSearchTerm) {
+          runSemanticOccupationSearch(currentSearchTerm);
+          return;
+        }
+
+        semanticSearchResults = [];
+        setAdminSearchStatus("");
+        applyOccupationFilters(occupations, true);
+      }
+
+      function applyOccupationFilters(sourceOccupations, includeTextSearch) {
+        const filters = getSearchFilterValues();
         const searchTerm = (currentSearchTerm || "").toLowerCase();
 
-        filteredOccupations = occupations.filter((occupation) => {
-          const divisionMatch = !divisionFilter || occupation.division === divisionFilter;
-          const familyMatch = !familyFilter || occupation.family === familyFilter;
+        filteredOccupations = sourceOccupations.filter((occupation) => {
+          const divisionMatch = !filters.division.length || filters.division.includes(occupation.division || "");
+          const subDivisionMatch = !filters.sub_division.length || filters.sub_division.includes(occupation.sub_division || "");
+          const groupMatch = !filters.group.length || filters.group.includes(occupation.group || "");
+          const familyMatch = !filters.family.length || filters.family.includes(occupation.family || "");
 
-          if (!searchTerm) {
-            return divisionMatch && familyMatch;
+          if (!includeTextSearch || !searchTerm) {
+            return divisionMatch && subDivisionMatch && groupMatch && familyMatch;
           }
 
           const searchFields = [
             occupation.occupation_title,
             occupation.description,
             occupation.division,
+            occupation.sub_division,
+            occupation.group,
             occupation.family,
-            occupation.group
+            occupation.nco_code,
+            occupation.nco_2004_code
           ].filter(Boolean);
           
           const textMatch = searchFields.some(field => 
             field.toLowerCase().includes(searchTerm)
           );
           
-          return textMatch && divisionMatch && familyMatch;
+          return textMatch && divisionMatch && subDivisionMatch && groupMatch && familyMatch;
         });
 
         currentPage = 1;
@@ -1727,8 +2555,78 @@
       }
 
       function filterOccupations() {
+        const evt = typeof event !== "undefined" ? event : null;
+        const changedId = evt && evt.target ? evt.target.id : "";
+        if (!evt || !evt.target || !evt.target.closest || !evt.target.closest(".multi-select-menu")) {
+          refreshSearchFilterOptions(changedId);
+        }
+
         currentPage = 1;
+        if (getAdminSearchMode() === "semantic" && currentSearchTerm && semanticSearchResults.length) {
+          applyOccupationFilters(semanticSearchResults, false);
+          setAdminSearchStatus(`Showing ${filteredOccupations.length} filtered semantic matches`);
+          return;
+        }
         applyFilters();
+      }
+
+      function getAdminSearchMode() {
+        const modeSelect = document.getElementById("adminSearchMode");
+        return modeSelect ? modeSelect.value : "normal";
+      }
+
+      function setAdminSearchStatus(message) {
+        const status = document.getElementById("adminSearchStatus");
+        if (status) status.textContent = message || "";
+      }
+
+      function runSemanticOccupationSearch(query) {
+        const requestId = ++semanticSearchRequestId;
+        setAdminSearchStatus("Searching with Semantic search...");
+
+        fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query,
+            search_mode: "general",
+            top_k: 100
+          })
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (requestId !== semanticSearchRequestId) return;
+            if (data.error) {
+              throw new Error(data.error);
+            }
+
+            const rankedResults = Array.isArray(data.results) ? data.results : [];
+            const rankedOccupations = rankedResults
+              .map((result) => {
+                if (Number.isInteger(result.row_id)) {
+                  return occupations.find((occupation) => occupation.row_id === result.row_id);
+                }
+                const resultCode = normalizeCodeForCompare(result.nco_code || result.nco_2015 || "");
+                return occupations.find((occupation) => normalizeCodeForCompare(occupation.nco_code) === resultCode);
+              })
+              .filter(Boolean);
+
+            semanticSearchResults = rankedOccupations;
+            applyOccupationFilters(semanticSearchResults, false);
+            setAdminSearchStatus(`Showing ${filteredOccupations.length} of ${rankedOccupations.length} semantic matches`);
+          })
+          .catch((error) => {
+            if (requestId !== semanticSearchRequestId) return;
+            console.error("Semantic admin search failed:", error);
+            semanticSearchResults = [];
+            filteredOccupations = [];
+            displayTable();
+            setAdminSearchStatus("Semantic search failed. Try normal table search.");
+          });
+      }
+
+      function normalizeCodeForCompare(value) {
+        return String(value || "").replace(/\s+/g, "").toLowerCase();
       }
 
       function refreshData() {
@@ -2053,6 +2951,13 @@
             updateFamilyDropdown("addDivision", "addSubDivision", "addGroup", "addFamily");
           });
         }
+
+        document.addEventListener("click", function(evt) {
+          if (evt.target.closest && evt.target.closest(".multi-select")) return;
+          document.querySelectorAll(".multi-select.open").forEach((select) => {
+            select.classList.remove("open");
+          });
+        });
 
         const ncoInputs = [
           { a: document.getElementById('addNcoCodeFirst'), b: document.getElementById('addNcoCodeSecond') },
@@ -2462,3 +3367,4 @@
           </script>
   </body>
 </html>
+

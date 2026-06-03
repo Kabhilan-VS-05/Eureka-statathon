@@ -4,15 +4,15 @@ import numpy as np
 import faiss
 import re
 from sentence_transformers import SentenceTransformer
+import sys
 
 # ------------------ CONFIG ------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(BASE_DIR)
+if PROJECT_DIR not in sys.path:
+    sys.path.append(PROJECT_DIR)
 
-INDEX_PATH = os.path.join(BASE_DIR, "../models/nco_faiss.index")
-EMBEDDINGS_PATH = os.path.join(BASE_DIR, "../models/nco_embeddings.npy")
-METADATA_PATH = os.path.join(BASE_DIR, "../data/processed/nco_metadata.json")
-GN_PATH = os.path.join(BASE_DIR, "../data/processed/nco_graph.json")
-CSV_PATH = os.path.join(BASE_DIR, "../data/raw/data_with_descriptions.csv")
+import db_store
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 DEFAULT_TOP_K = 5
@@ -24,16 +24,19 @@ ALPHA = 0.7        # weight for semantic score
 BETA = 0.3         # weight for graph score
 
 # ------------------ LOAD DATA ------------------
-print("Loading metadata...")
-with open(METADATA_PATH, "r", encoding="utf-8") as f:
-    metadata = json.load(f)
+print("Loading metadata from PostgreSQL...")
+documents, metadata = db_store.load_search_documents()
+if not metadata:
+    raise RuntimeError("No search metadata found in PostgreSQL. Run scripts/migrate_to_postgres.py first.")
 
-print("Loading Graph Network...")
-with open(GN_PATH, "r", encoding="utf-8") as f:
-    gn = json.load(f)
+print("Loading Graph Network from PostgreSQL...")
+gn = db_store.load_graph()
 
-print("Loading FAISS index...")
-index = faiss.read_index(INDEX_PATH)
+print("Loading FAISS index from PostgreSQL...")
+index_bytes = db_store.load_asset("nco_faiss.index")
+if not index_bytes:
+    raise RuntimeError("No FAISS index found in PostgreSQL. Run scripts/migrate_to_postgres.py first.")
+index = faiss.deserialize_index(np.frombuffer(index_bytes, dtype="uint8"))
 
 print("Loading SBERT model...")
 model = SentenceTransformer(MODEL_NAME)
@@ -49,24 +52,21 @@ title_embeddings = model.encode(
 title_index = faiss.IndexFlatIP(title_embeddings.shape[1])
 title_index.add(title_embeddings)
 
-print("Loading detailed job descriptions from CSV...")
-import csv
+print("Loading detailed job descriptions from PostgreSQL...")
 job_details = {}
-with open(CSV_PATH, "r", encoding="utf-8") as f:
-    reader = csv.DictReader(f)
-    for row in reader:
-        # Use NCO 2015 as the key for lookup
-        nco_code = row["NCO 2015"]
-        job_details[nco_code] = {
-            "nco_2004_code": row["NCO 2004"],
-            "division": row["Division"],
-            "sub_division": row["Sub Division"],
-            "group": row["Group"],
-            "family": row["Family"],
-            "occupation_description": row["Occupation Description"],
-            "family_description": row["Family Description"],
-            "group_description": row["Group Description"]
-        }
+_, occupation_rows = db_store.load_csv_rows()
+for row in occupation_rows:
+    nco_code = row["NCO 2015"]
+    job_details[nco_code] = {
+        "nco_2004_code": row["NCO 2004"],
+        "division": row["Division"],
+        "sub_division": row["Sub Division"],
+        "group": row["Group"],
+        "family": row["Family"],
+        "occupation_description": row["Occupation Description"],
+        "family_description": row["Family Description"],
+        "group_description": row["Group Description"]
+    }
 
 # ------------------ HELPER FUNCTIONS ------------------
 def clean_text(text):
@@ -86,21 +86,58 @@ def compute_graph_score(query, occupation_code):
 # ------------------ HELPER FUNCTIONS ------------------
 def get_all_jobs():
     all_jobs = []
-    with open(CSV_PATH, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            all_jobs.append({
-                "occupation_title": row["Occupational Title"],
-                "nco_code": row["NCO 2015"],
-                "details": {
-                    "nco_2004_code": row["NCO 2004"],
-                    "division": row["Division"],
-                    "sub_division": row["Sub Division"],
-                    "group": row["Group"],
-                    "family": row["Family"],
-                }
-            })
+    _, rows = db_store.load_csv_rows()
+    for row in rows:
+        all_jobs.append({
+            "occupation_title": row["Occupational Title"],
+            "nco_code": row["NCO 2015"],
+            "details": {
+                "nco_2004_code": row["NCO 2004"],
+                "division": row["Division"],
+                "sub_division": row["Sub Division"],
+                "group": row["Group"],
+                "family": row["Family"],
+            }
+        })
     return all_jobs
+
+
+def reload_from_db():
+    global documents, metadata, gn, index, title_index, job_details
+
+    print("Reloading search runtime from PostgreSQL...")
+    documents, metadata = db_store.load_search_documents()
+    gn = db_store.load_graph()
+
+    index_bytes = db_store.load_asset("nco_faiss.index")
+    if not index_bytes:
+        raise RuntimeError("No FAISS index found in PostgreSQL.")
+    index = faiss.deserialize_index(np.frombuffer(index_bytes, dtype="uint8"))
+
+    title_documents = [item.get("occupation_title", "") for item in metadata]
+    title_embeddings = model.encode(
+        title_documents,
+        show_progress_bar=False,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+    )
+    title_index = faiss.IndexFlatIP(title_embeddings.shape[1])
+    title_index.add(title_embeddings)
+
+    job_details = {}
+    _, rows = db_store.load_csv_rows()
+    for row in rows:
+        nco_code = row["NCO 2015"]
+        job_details[nco_code] = {
+            "nco_2004_code": row["NCO 2004"],
+            "division": row["Division"],
+            "sub_division": row["Sub Division"],
+            "group": row["Group"],
+            "family": row["Family"],
+            "occupation_description": row["Occupation Description"],
+            "family_description": row["Family Description"],
+            "group_description": row["Group Description"]
+        }
 
 # ------------------ SEARCH FUNCTION ------------------
 def search(query, top_k=DEFAULT_TOP_K):

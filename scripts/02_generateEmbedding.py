@@ -1,40 +1,34 @@
-import json
-import numpy as np
-from sentence_transformers import SentenceTransformer
 import os
+import sys
 
-DOCUMENTS_PATH = "data/processed/nco_documents.json"
-EMBEDDINGS_PATH = "models/nco_embeddings.npy"
+from sentence_transformers import SentenceTransformer
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_DIR not in sys.path:
+    sys.path.append(PROJECT_DIR)
+
+import db_store
+
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 
-def load_documents(path):
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
 
-def generate_embeddings(documents, model):
-    return model.encode(
+if __name__ == "__main__":
+    db_store.init_db()
+    print("Loading documents from PostgreSQL...")
+    documents, _ = db_store.load_search_documents()
+
+    print("Loading SBERT model...")
+    model = SentenceTransformer(MODEL_NAME)
+
+    print("Generating embeddings...")
+    embeddings = model.encode(
         documents,
         show_progress_bar=True,
         convert_to_numpy=True,
-        normalize_embeddings=True
+        normalize_embeddings=True,
     )
 
-def save_embeddings(embeddings, path):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    np.save(path, embeddings)
-
-if __name__ == "__main__":
-    print("📥 Loading documents...")
-    documents = load_documents(DOCUMENTS_PATH)
-
-    print("🤖 Loading SBERT model...")
-    model = SentenceTransformer(MODEL_NAME)
-
-    print("🔢 Generating embeddings...")
-    embeddings = generate_embeddings(documents, model)
-
-    save_embeddings(embeddings, EMBEDDINGS_PATH)
-
-    print("✅ Embeddings generated")
-    print(f"📊 Shape: {embeddings.shape}")
+    db_store.save_embeddings(embeddings)
+    print("Embeddings stored in PostgreSQL")
+    print(f"Shape: {embeddings.shape}")

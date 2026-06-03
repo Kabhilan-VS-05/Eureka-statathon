@@ -21,7 +21,7 @@ Current runtime mode:
 - Retrieval/ML: `sentence-transformers` (`all-MiniLM-L6-v2`), `faiss-cpu`, `numpy`
 - Data utilities: `pandas`, `csv`, `json`
 - Translation + language detection: `requests`, `langdetect`
-- Admin storage: SQLite (`data/admin.db`) for admin settings/password hash
+- Storage: PostgreSQL for occupations, admin settings/password hash, prompt history, semantic documents, graph data, embeddings, and serialized FAISS index bytes
 - Frontend: HTML/CSS/Vanilla JS + Bootstrap + Chart.js
 
 Dependencies declared in `requirements.txt`:
@@ -37,12 +37,14 @@ Dependencies declared in `requirements.txt`:
 
 ## 3) Repository Structure (Functional)
 - `app.py`: Main Flask app, API routes, admin validation, data mutation, search asset rebuilds
+- `db_store.py`: PostgreSQL schema and storage helpers
+- `scripts/migrate_to_postgres.py`: one-time importer from the previous CSV/JSON/SQLite files into PostgreSQL
 - `templates/index.html`: User search UI (general search + NCO search + voice + language flow)
 - `templates/admin/dashboard.html`: Admin dashboard (analytics charts + database management CRUD)
 - `static/gov-style.css`: Main user UI styling
-- `scripts/01_preparation.py`: CSV to semantic documents + metadata
-- `scripts/02_generateEmbedding.py`: Generate embeddings `.npy`
-- `scripts/03_build_faiss_index.py`: Build FAISS index
+- `scripts/01_preparation.py`: PostgreSQL occupations to semantic documents + metadata
+- `scripts/02_generateEmbedding.py`: Generate embeddings and store them in PostgreSQL
+- `scripts/03_build_faiss_index.py`: Build FAISS index and store it in PostgreSQL
 - `scripts/04_search.py`: CLI semantic search test utility
 - `scripts/05_searchGN.py`: Build simple graph-network keyword map
 - `scripts/06_searchapp.py`: Runtime hybrid search implementation + PIGS helper
@@ -50,16 +52,17 @@ Dependencies declared in `requirements.txt`:
 - `utils/dynamic_prompts.py`: dynamic prompt generation based on occupation title/category
 - `utils/analyze_occupations.py`: exploratory analysis utility
 - `utils/debug_search.py`: quick debug search utility
-- `data/raw/data_with_descriptions.csv`: source occupation database
-- `data/processed/*.json`: derived runtime artifacts
-- `models/*`: embeddings and FAISS index
-- `data/admin.db`: admin settings (password hash)
+- `data/raw/data_with_descriptions.csv`: previous import source for migration
+- `data/processed/*.json`: previous import source for migration/history
+- `models/*`: legacy local artifacts no longer used by runtime
+- `data/admin.db`: previous admin settings source for migration
 
 ---
 
 ## 4) Data Model and Artifacts
 ### Primary source-of-truth data
-- CSV: `data/raw/data_with_descriptions.csv`
+- PostgreSQL table: `occupations`
+- Previous CSV import source: `data/raw/data_with_descriptions.csv`
 - Important columns used:
   - `S No`
   - `Occupational Title`
@@ -76,17 +79,17 @@ Dependencies declared in `requirements.txt`:
   - `Occupation Description`
 
 ### Derived/search artifacts
-- `data/processed/nco_documents.json`
-- `data/processed/nco_metadata.json`
-- `data/processed/nco_graph.json`
-- `models/nco_embeddings.npy`
-- `models/nco_faiss.index`
+- PostgreSQL table: `search_documents`
+- PostgreSQL table: `nco_graph`
+- PostgreSQL table: `search_assets`
+  - `nco_embeddings.npy`
+  - `nco_faiss.index`
 
 ### Operational telemetry
-- `data/processed/prompt_history.json` (search history, top result details, query metadata)
+- PostgreSQL table: `prompt_history` (search history, top result details, query metadata)
 
 ### Admin settings
-- SQLite table: `admin_settings(key TEXT PRIMARY KEY, value TEXT)`
+- PostgreSQL table: `admin_settings(key TEXT PRIMARY KEY, value TEXT)`
 - Password stored as PBKDF2 hash with salt in format: `salt$digest`
 
 ---
@@ -270,18 +273,23 @@ File: `templates/admin/dashboard.html`
 ## 13) Runbook
 ## Local setup
 1. Create/activate Python env.
-2. Install dependencies:
+2. Create PostgreSQL database and set `DATABASE_URL`, for example:
+   ```bash
+   set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/statathon_nco
+   ```
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Ensure required files exist:
-   - `data/raw/data_with_descriptions.csv`
-   - `data/processed/*` and `models/*` (or regenerate via scripts)
-4. Run:
+4. Run the one-time migration/import:
+   ```bash
+   python scripts/migrate_to_postgres.py
+   ```
+5. Run:
    ```bash
    python app.py
    ```
-5. Open:
+6. Open:
    - App: `http://127.0.0.1:5000/`
    - Admin: `http://127.0.0.1:5000/admin`
 
