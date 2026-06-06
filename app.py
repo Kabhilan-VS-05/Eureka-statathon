@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()  # Load .env before anything else (must be first)
+
 from flask import Flask, render_template, request, jsonify
 import sys
 import os

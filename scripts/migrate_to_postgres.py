@@ -4,6 +4,9 @@ import re
 import sqlite3
 import sys
 
+from dotenv import load_dotenv
+load_dotenv()  # Load .env before db_store reads DATABASE_URL
+
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer

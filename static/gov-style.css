@@ -840,3 +840,455 @@ main h1 {
   background-color: #e0e0e0;
   transform: translateY(-2px);
 }
+
+/* =========================================================
+   TABLET STYLES (max-width: 992px)
+   Only layout-level tweaks, keep the government look
+   ========================================================= */
+@media (max-width: 992px) {
+  .header-main {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+    padding: 10px 3%;
+  }
+  .logo-container { flex-direction: column; gap: 8px; }
+  .logo { margin-right: 0; }
+  .nav-list { flex-wrap: wrap; justify-content: center; padding: 0 2%; }
+  .container { width: 95%; padding: 15px; }
+}
+
+/* =========================================================
+   MOBILE STYLES (max-width: 768px)
+   Complete redesign — modern, app-like, premium
+   ========================================================= */
+@media (max-width: 768px) {
+  /* ── Base Reset ── */
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    overflow-x: hidden;
+    background: #f0f4f8;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding-bottom: 12px; /* no bottom nav on home page */
+  }
+
+  /* ── Compact Sticky Header ── */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 500;
+    background: #fff;
+    border-bottom: 3px solid #003366;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+
+  .header-main {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .logo-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .logo {
+    height: 36px;
+    width: 36px;
+    flex-shrink: 0;
+    margin-right: 0;
+  }
+
+  .logo-text {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .logo-text .main-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #003366;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+    line-height: 1.2;
+  }
+
+  .logo-text .sub-title {
+    display: none;
+  }
+
+  .header-logos-right img,
+  .g20-logo {
+    height: 36px;
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  /* ── Bottom Tab Bar Navigation ── */
+  /* Hide the bottom nav bar on the main (home) page — only admin uses it */
+  .main-nav {
+    display: none !important;
+  }
+
+  .nav-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    width: 100%;
+    margin: 0;
+    padding: 0 4px;
+    list-style: none;
+    gap: 2px;
+  }
+
+  .nav-list::-webkit-scrollbar { display: none; }
+
+  .nav-list li {
+    flex: 1 0 auto;
+    min-width: 80px;
+    border-right: none;
+  }
+
+  .nav-list li a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.65);
+    text-align: center;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background 0.2s, color 0.2s;
+    line-height: 1.2;
+    height: 54px;
+  }
+
+  .nav-list li a::before {
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 16px;
+    margin-bottom: 3px;
+    display: block;
+  }
+
+  /* Nav icons by link text */
+  .nav-list li:nth-child(1) a::before { content: '\f015'; } /* About Us → home */
+  .nav-list li:nth-child(2) a::before { content: '\f15c'; } /* Acts → file */
+  .nav-list li:nth-child(3) a::before { content: '\f0c0'; } /* Citizen → users */
+  .nav-list li:nth-child(4) a::before { content: '\f0ad'; } /* Schemes → tools */
+  .nav-list li:nth-child(5) a::before { content: '\f1ad'; } /* Division → building */
+  .nav-list li:nth-child(6) a::before { content: '\f02d'; } /* Docs → book */
+  .nav-list li:nth-child(7) a::before { content: '\f0b1'; } /* NCO → briefcase */
+
+  .nav-list li a:hover,
+  .nav-list li a.active {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+  }
+
+  /* ── Main Container ── */
+  .container {
+    width: 100%;
+    margin: 12px 0;
+    background: transparent;
+    padding: 0 12px;
+    box-shadow: none;
+  }
+
+  main h1 {
+    font-size: 22px;
+    color: #003366;
+    padding: 16px 0 12px;
+    border-bottom: 2px solid #003366;
+    margin-bottom: 16px;
+  }
+
+  /* ── Search Card ── */
+  .search-container {
+    margin: 0 0 16px 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .search-form {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+  }
+
+  .modern-search-container {
+    flex-direction: column;
+    gap: 10px;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .modern-search-bar {
+    width: 100%;
+    border-radius: 12px;
+    padding: 4px 8px;
+    border: 1.5px solid #d1d5db;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  .modern-search-bar:focus-within {
+    border-color: #003366;
+    box-shadow: 0 0 0 3px rgba(0,51,102,0.1);
+  }
+
+  .modern-search-bar textarea,
+  .modern-search-bar input[type="text"] {
+    font-size: 15px;
+    padding: 8px 6px;
+    width: 100%;
+  }
+
+  .search-button {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 0;
+    padding: 13px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    background: #ffc107;
+    color: #1a1a1a;
+    box-shadow: 0 4px 12px rgba(255,193,7,0.35);
+    letter-spacing: 0.3px;
+  }
+
+  .search-mode-row {
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .search-mode-toggle {
+    width: 100%;
+    justify-content: center;
+    border-radius: 12px;
+    padding: 4px;
+  }
+
+  .search-mode-option {
+    flex: 1;
+    justify-content: center;
+    padding: 9px 8px;
+    font-size: 13px;
+  }
+
+  .top-k-control {
+    width: 100%;
+    justify-content: space-between;
+    border-radius: 12px;
+    padding: 8px 14px;
+  }
+
+  /* NCO Code input on mobile */
+  .nco-code-input {
+    width: 100%;
+    justify-content: center;
+    border-radius: 12px;
+    padding: 8px 6px;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .nco-code-group {
+    grid-template-columns: repeat(4, 28px);
+    gap: 4px;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  .nco-digit {
+    width: 28px;
+    height: 32px;
+    font-size: 14px;
+    border-radius: 6px;
+    padding: 0;
+  }
+
+  .nco-code-dot {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* ── Results as Cards ── */
+  .results-container {
+    margin-top: 16px;
+    overflow-x: hidden;
+  }
+
+  .results-header {
+    border-radius: 12px 12px 0 0;
+    padding: 12px 14px;
+  }
+
+  .results-header h2 {
+    font-size: 15px;
+  }
+
+  /* Hide the table header on mobile */
+  .results-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+  }
+
+  .results-table thead { display: none; }
+
+  .results-table tbody tr.family-divider-row {
+    display: table-row;
+  }
+
+  .results-table tbody tr.family-divider-row td {
+    display: table-cell;
+    border-radius: 10px;
+    font-size: 13px;
+    padding: 8px 14px;
+    border: none;
+  }
+
+  /* Each data row becomes a card */
+  .results-table tbody tr:not(.family-divider-row) {
+    display: block;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid #e5e7eb;
+    margin-bottom: 10px;
+    padding: 14px;
+    transition: box-shadow 0.2s;
+  }
+
+  .results-table tbody tr:not(.family-divider-row):hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    background: #fff;
+  }
+
+  /* Each cell becomes a labeled row */
+  .results-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border: none;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .results-table tbody td:last-child {
+    border-bottom: none;
+    justify-content: flex-end;
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+
+  /* Data labels — only on real data rows, NOT on family-divider-row */
+  .results-table tbody tr:not(.family-divider-row) td:nth-child(1)::before {
+    content: "Rank";
+    font-weight: 600;
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+  }
+
+  .results-table tbody tr:not(.family-divider-row) td:nth-child(2) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    border-bottom: none;
+    padding-bottom: 6px;
+  }
+
+  .results-table tbody tr:not(.family-divider-row) td:nth-child(2)::before {
+    content: "Occupation";
+    font-weight: 600;
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .results-table tbody tr:not(.family-divider-row) td:nth-child(2) a,
+  .results-table tbody tr:not(.family-divider-row) td:nth-child(2) span {
+    font-size: 16px;
+    font-weight: 700;
+    color: #003366;
+  }
+
+  .results-table tbody tr:not(.family-divider-row) td:nth-child(3)::before {
+    content: "NCO 2015";
+    font-weight: 600;
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+  }
+
+  .results-table tbody tr:not(.family-divider-row) td:nth-child(4)::before {
+    content: "Match";
+    font-weight: 600;
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+  }
+
+  /* ── Modal ── */
+  .modal-content {
+    width: 94%;
+    margin: 12% auto;
+    border-radius: 16px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .modal-info-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* ── Search Status ── */
+  .search-status {
+    bottom: 20px;
+    left: 12px;
+    right: 12px;
+    justify-content: center;
+  }
+
+  /* ── Guidance Container ── */
+  .guidance-container {
+    border-radius: 12px;
+  }
+}
+

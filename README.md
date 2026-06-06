@@ -19,10 +19,11 @@ The application has two major surfaces:
 
 ## Quick Start
 1. Create a PostgreSQL database, for example `statathon_nco`.
-2. Set the database URL:
-   ```bash
-   set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/statathon_nco
+2. Create a `.env` file in the project root with your database credentials:
+   ```env
+   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/statathon_nco
    ```
+   > **Note:** The `.env` file is git-ignored and never committed. Do not use `set` or `$env:` — the app loads credentials automatically via `python-dotenv`.
 3. Install dependencies:
    ```bash
    pip install -r requirements.txt

@@ -12,6 +12,60 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
+    <style>
+      /* Guidance Container Styles */
+      .guidance-container {
+        margin-top: 15px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #f8fafc;
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+      .guidance-summary {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        cursor: pointer;
+        background: #f1f5f9;
+        font-weight: 600;
+        color: #1e293b;
+        user-select: none;
+        list-style: none;
+      }
+      .guidance-summary::-webkit-details-marker {
+        display: none;
+      }
+      .guidance-summary:hover {
+        background: #e2e8f0;
+      }
+      .summary-title {
+        margin-left: 8px;
+        flex: 1;
+      }
+      .toggle-icon {
+        transition: transform 0.3s ease;
+        color: #64748b;
+      }
+      details[open] .toggle-icon {
+        transform: rotate(180deg);
+      }
+      .guidance-content {
+        padding: 16px;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .guidance-content .suggestion-box {
+        margin: 0;
+        box-shadow: none;
+        border: 1px solid #cbd5e1;
+      }
+      .text-warning {
+        color: #f59e0b;
+      }
+    </style>
   </head>
   <body>
     <header class="site-header">
@@ -61,7 +115,7 @@
               <div class="modern-search-bar">
                 <textarea
                   id="occupationSearch"
-                  placeholder="Search by Occupation... (Enter to search, Shift+Enter for new line)"
+                  placeholder=""
                   rows="1"
                 ></textarea>
                 <button id="micBtn" class="mic-button" title="Voice Search">
@@ -149,8 +203,17 @@
             </div>
           </div>
           <div id="transcriptionPreview" class="transcription-preview"></div>
-          <div id="suggestionBox" class="suggestion-box hidden"></div>
-          <div id="pigsBox" class="suggestion-box hidden"></div>
+          <details id="guidanceContainer" class="guidance-container hidden">
+            <summary class="guidance-summary">
+              <i class="fas fa-lightbulb text-warning"></i> 
+              <span class="summary-title">View Search Intelligence & Guidance</span>
+              <i class="fas fa-chevron-down toggle-icon"></i>
+            </summary>
+            <div class="guidance-content">
+              <div id="suggestionBox" class="suggestion-box hidden"></div>
+              <div id="pigsBox" class="suggestion-box hidden"></div>
+            </div>
+          </details>
         </div>
 
         <div id="searchStatus" class="search-status hidden">
@@ -326,6 +389,7 @@
         document.getElementById("translationNotice").classList.add("hidden");
         suggestionBox.classList.add("hidden");
         pigsBox.classList.add("hidden");
+        document.getElementById("guidanceContainer").classList.add("hidden");
         showMoreBtn.classList.add("hidden");
 
         try {
@@ -487,6 +551,7 @@
         document.getElementById("translationNotice").classList.add("hidden");
         showMoreBtn.classList.add("hidden");
         pigsBox.classList.add("hidden");
+        document.getElementById("guidanceContainer").classList.add("hidden");
 
         try {
           const requestedTopK = getTopK();
@@ -524,10 +589,12 @@
               .classList.remove("hidden");
           }
 
+          let hasGuidance = false;
           // Handle suggestions
           if (data.suggestion) {
             suggestionBox.innerHTML = `<strong>Search Help</strong><br>${data.suggestion}`;
             suggestionBox.classList.remove("hidden");
+            hasGuidance = true;
           } else {
             suggestionBox.classList.add("hidden");
           }
@@ -552,8 +619,17 @@
 
             pigsBox.innerHTML = pigsHtml;
             pigsBox.classList.remove("hidden");
+            hasGuidance = true;
           } else {
             pigsBox.classList.add("hidden");
+          }
+
+          const guidanceContainer = document.getElementById("guidanceContainer");
+          if (hasGuidance) {
+            guidanceContainer.classList.remove("hidden");
+            guidanceContainer.removeAttribute("open");
+          } else {
+            guidanceContainer.classList.add("hidden");
           }
 
           if (data.results && data.results.length > 0) {
@@ -614,6 +690,7 @@
           .classList.add("hidden");
         showMoreBtn.classList.add("hidden");
         pigsBox.classList.add("hidden");
+        document.getElementById("guidanceContainer").classList.add("hidden");
 
         try {
           const requestedTopK = getTopK();
@@ -668,10 +745,12 @@
               .classList.remove("hidden");
           }
 
+          let hasGuidance = false;
           // Handle suggestions
           if (data.suggestion) {
             suggestionBox.innerHTML = `<strong>Search Help</strong><br>${data.suggestion}`;
             suggestionBox.classList.remove("hidden");
+            hasGuidance = true;
           } else {
             suggestionBox.classList.add("hidden");
           }
@@ -703,8 +782,17 @@
 
             pigsBox.innerHTML = pigsHtml;
             pigsBox.classList.remove("hidden");
+            hasGuidance = true;
           } else {
             pigsBox.classList.add("hidden");
+          }
+
+          const guidanceContainer = document.getElementById("guidanceContainer");
+          if (hasGuidance) {
+            guidanceContainer.classList.remove("hidden");
+            guidanceContainer.removeAttribute("open");
+          } else {
+            guidanceContainer.classList.add("hidden");
           }
 
           if (data.results && data.results.length > 0) {
