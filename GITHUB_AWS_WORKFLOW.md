@@ -105,9 +105,13 @@ git pull origin Kabhilan
 ```
 
 ### Step 4: Install Python Dependencies (If Changed)
-If your latest pull includes changes to `requirements.txt` (like adding new packages), install them using pip. On newer Ubuntu versions, you must pass the `--break-system-packages` flag to override the external environment protection:
+If your latest pull includes changes to `requirements.txt` (like adding new packages), install them using pip. **Crucially**, make sure to activate your virtual environment so the packages are installed where your web server can see them!
 ```bash
-pip3 install -r requirements.txt --break-system-packages
+# Activate the virtual environment
+source venv/bin/activate
+
+# Install the dependencies
+pip install -r requirements.txt
 ```
 
 ### Step 5: Restart the Flask Backend
@@ -132,6 +136,10 @@ git push origin Kabhilan
 ```bash
 cd /var/www/nco-backend
 git pull origin Kabhilan
-pip3 install -r requirements.txt --break-system-packages  # (Only if you added new packages)
+
+# (Only run the next two lines if you added new packages to requirements.txt)
+source venv/bin/activate
+pip install -r requirements.txt
+
 sudo systemctl restart nco-backend
 ```
