@@ -18,10 +18,74 @@ if PROJECT_DIR not in sys.path:
 import db_store
 
 
-CSV_PATH = os.path.join(PROJECT_DIR, "data", "raw", "data_with_descriptions.csv")
+CSV_PATH = os.path.join(PROJECT_DIR, "data", "raw", "nco_dataset_v6_final.csv")
 PROMPT_HISTORY_PATH = os.path.join(PROJECT_DIR, "data", "processed", "prompt_history.json")
 ADMIN_DB_PATH = os.path.join(PROJECT_DIR, "data", "admin.db")
-MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_NAME = "BAAI/bge-small-en-v1.5"
+
+# Auto-arrange dataset file if present in the root folder
+import shutil
+_root_csv = os.path.join(PROJECT_DIR, 'nco_dataset_v6_final.csv')
+_target_csv = CSV_PATH
+if os.path.exists(_root_csv):
+    os.makedirs(os.path.dirname(_target_csv), exist_ok=True)
+    try:
+        shutil.move(_root_csv, _target_csv)
+        print(f"Automatically moved {_root_csv} to {_target_csv}")
+    except Exception as e:
+        print(f"Failed to move CSV automatically: {e}")
+
+# Auto-generate decoupled frontend assets
+_src_index = os.path.join(PROJECT_DIR, 'templates', 'index.html')
+_dst_index = os.path.join(PROJECT_DIR, 'frontend', 'index.html')
+if os.path.exists(_src_index):
+    os.makedirs(os.path.dirname(_dst_index), exist_ok=True)
+    try:
+        with open(_src_index, 'r', encoding='utf-8') as f:
+            content = f.read()
+        content = content.replace("{{ url_for('static', filename='gov-style.css') }}", "css/gov-style.css")
+        content = content.replace('{{ url_for("static", filename="gov-style.css") }}', 'css/gov-style.css')
+        if 'js/config.js' not in content:
+            content = content.replace('</head>', '  <script src="js/config.js"></script>\n  </head>')
+        content = re.sub(r'fetch\("(/api/[^"]*)"\)', r'fetch(window.API_BASE_URL + "\1")', content)
+        content = re.sub(r'fetch\("(/api/[^"]*)",', r'fetch(window.API_BASE_URL + "\1",', content)
+        content = re.sub(r"fetch\('(/api/[^']*)'\)", r"fetch(window.API_BASE_URL + '\1')", content)
+        content = re.sub(r"fetch\('(/api/[^']*)',", r"fetch(window.API_BASE_URL + '\1',", content)
+        content = re.sub(r'fetch\(`(/api/[^`]*)`\)', r'fetch(`${window.API_BASE_URL || ""}\1`)', content)
+        content = re.sub(r'fetch\(`(/api/[^`]*)`,', r'fetch(`${window.API_BASE_URL || ""}\1`,', content)
+        with open(_dst_index, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"Automatically generated {_dst_index} from {_src_index}")
+    except Exception as e:
+        print(f"Failed to generate frontend/index.html automatically: {e}")
+
+_src_admin = os.path.join(PROJECT_DIR, 'templates', 'admin', 'dashboard.html')
+_dst_admin = os.path.join(PROJECT_DIR, 'frontend', 'admin.html')
+if os.path.exists(_src_admin):
+    os.makedirs(os.path.dirname(_dst_admin), exist_ok=True)
+    try:
+        with open(_src_admin, 'r', encoding='utf-8') as f:
+            content = f.read()
+        if 'js/config.js' not in content:
+            content = content.replace('</head>', '  <script src="js/config.js"></script>\n  </head>')
+        content = re.sub(r'fetch\("(/admin/api/[^"]*)"\)', r'fetch(window.API_BASE_URL + "\1")', content)
+        content = re.sub(r'fetch\("(/api/[^"]*)"\)', r'fetch(window.API_BASE_URL + "\1")', content)
+        content = re.sub(r'fetch\("(/admin/api/[^"]*)",', r'fetch(window.API_BASE_URL + "\1",', content)
+        content = re.sub(r'fetch\("(/api/[^"]*)",', r'fetch(window.API_BASE_URL + "\1",', content)
+        content = re.sub(r"fetch\('(/admin/api/[^']*)'\)", r"fetch(window.API_BASE_URL + '\1')", content)
+        content = re.sub(r"fetch\('(/api/[^']*)'\)", r"fetch(window.API_BASE_URL + '\1')", content)
+        content = re.sub(r"fetch\('(/admin/api/[^']*)',", r"fetch(window.API_BASE_URL + '\1',", content)
+        content = re.sub(r"fetch\('(/api/[^']*)',", r"fetch(window.API_BASE_URL + '\1',", content)
+        content = re.sub(r'fetch\(`(/admin/api/[^`]*)`\)', r'fetch(`${window.API_BASE_URL || ""}\1`)', content)
+        content = re.sub(r'fetch\(`(/api/[^`]*)`\)', r'fetch(`${window.API_BASE_URL || ""}\1`)', content)
+        content = re.sub(r'fetch\(`(/admin/api/[^`]*)`,', r'fetch(`${window.API_BASE_URL || ""}\1`,', content)
+        content = re.sub(r'fetch\(`(/api/[^`]*)`,', r'fetch(`${window.API_BASE_URL || ""}\1`,', content)
+        with open(_dst_admin, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"Automatically generated {_dst_admin} from {_src_admin}")
+    except Exception as e:
+        print(f"Failed to generate frontend/admin.html automatically: {e}")
+
 
 
 def safe_text(value):
@@ -99,8 +163,20 @@ def rebuild_search_assets():
     documents, metadata = build_documents_and_metadata(rows)
     db_store.save_search_documents(documents, metadata)
 
+    # Save documents and metadata JSON files locally as well
+    processed_dir = os.path.join(PROJECT_DIR, "data", "processed")
+    os.makedirs(processed_dir, exist_ok=True)
+    with open(os.path.join(processed_dir, "nco_documents.json"), "w", encoding="utf-8") as f:
+        json.dump(documents, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(processed_dir, "nco_metadata.json"), "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
+
     graph = build_graph(documents, metadata)
     db_store.save_graph(graph)
+
+    # Save graph JSON file locally as well
+    with open(os.path.join(processed_dir, "nco_graph.json"), "w", encoding="utf-8") as f:
+        json.dump(graph, f, indent=2, ensure_ascii=False)
 
     print("Loading SBERT model...")
     model = SentenceTransformer(MODEL_NAME)
@@ -141,6 +217,21 @@ def main():
 
     print("Migration complete.")
     print(f"Database URL: {db_store.DATABASE_URL}")
+
+    # Cleanup unwanted legacy files that are now stored in PostgreSQL
+    print("Cleaning up unwanted legacy files...")
+    legacy_files = [
+        os.path.join(PROJECT_DIR, "data", "raw", "data_with_descriptions.csv"),
+        os.path.join(PROJECT_DIR, "models", "nco_embeddings.npy"),
+        os.path.join(PROJECT_DIR, "models", "nco_faiss.index")
+    ]
+    for fpath in legacy_files:
+        if os.path.exists(fpath):
+            try:
+                os.remove(fpath)
+                print(f"Removed unwanted legacy file: {fpath}")
+            except Exception as e:
+                print(f"Failed to remove {fpath}: {e}")
 
 
 if __name__ == "__main__":

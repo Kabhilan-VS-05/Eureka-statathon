@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()  # Load .env before anything else (must be first)
 
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 import sys
 import os
 import json
@@ -18,6 +19,70 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
 import db_store
 db_store.init_db()
+
+# Auto-arrange dataset file if present in the root folder
+import shutil
+import re
+_root_csv = os.path.join(os.path.dirname(__file__), 'nco_dataset_v6_final.csv')
+_target_csv = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'nco_dataset_v6_final.csv')
+if os.path.exists(_root_csv):
+    os.makedirs(os.path.dirname(_target_csv), exist_ok=True)
+    try:
+        shutil.move(_root_csv, _target_csv)
+        print(f"Automatically moved {_root_csv} to {_target_csv}")
+    except Exception as e:
+        print(f"Failed to move CSV automatically: {e}")
+
+# Auto-generate decoupled frontend assets
+_src_index = os.path.join(os.path.dirname(__file__), 'templates', 'index.html')
+_dst_index = os.path.join(os.path.dirname(__file__), 'frontend', 'index.html')
+if os.path.exists(_src_index):
+    os.makedirs(os.path.dirname(_dst_index), exist_ok=True)
+    try:
+        with open(_src_index, 'r', encoding='utf-8') as f:
+            content = f.read()
+        content = content.replace("{{ url_for('static', filename='gov-style.css') }}", "css/gov-style.css")
+        content = content.replace('{{ url_for("static", filename="gov-style.css") }}', 'css/gov-style.css')
+        if 'js/config.js' not in content:
+            content = content.replace('</head>', '  <script src="js/config.js"></script>\n  </head>')
+        content = re.sub(r'fetch\("(/api/[^"]*)"\)', r'fetch(window.API_BASE_URL + "\1")', content)
+        content = re.sub(r'fetch\("(/api/[^"]*)",', r'fetch(window.API_BASE_URL + "\1",', content)
+        content = re.sub(r"fetch\('(/api/[^']*)'\)", r"fetch(window.API_BASE_URL + '\1')", content)
+        content = re.sub(r"fetch\('(/api/[^']*)',", r"fetch(window.API_BASE_URL + '\1',", content)
+        content = re.sub(r'fetch\(`(/api/[^`]*)`\)', r'fetch(`${window.API_BASE_URL || ""}\1`)', content)
+        content = re.sub(r'fetch\(`(/api/[^`]*)`,', r'fetch(`${window.API_BASE_URL || ""}\1`,', content)
+        with open(_dst_index, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"Automatically generated {_dst_index} from {_src_index}")
+    except Exception as e:
+        print(f"Failed to generate frontend/index.html automatically: {e}")
+
+_src_admin = os.path.join(os.path.dirname(__file__), 'templates', 'admin', 'dashboard.html')
+_dst_admin = os.path.join(os.path.dirname(__file__), 'frontend', 'admin.html')
+if os.path.exists(_src_admin):
+    os.makedirs(os.path.dirname(_dst_admin), exist_ok=True)
+    try:
+        with open(_src_admin, 'r', encoding='utf-8') as f:
+            content = f.read()
+        if 'js/config.js' not in content:
+            content = content.replace('</head>', '  <script src="js/config.js"></script>\n  </head>')
+        content = re.sub(r'fetch\("(/admin/api/[^"]*)"\)', r'fetch(window.API_BASE_URL + "\1")', content)
+        content = re.sub(r'fetch\("(/api/[^"]*)"\)', r'fetch(window.API_BASE_URL + "\1")', content)
+        content = re.sub(r'fetch\("(/admin/api/[^"]*)",', r'fetch(window.API_BASE_URL + "\1",', content)
+        content = re.sub(r'fetch\("(/api/[^"]*)",', r'fetch(window.API_BASE_URL + "\1",', content)
+        content = re.sub(r"fetch\('(/admin/api/[^']*)'\)", r"fetch(window.API_BASE_URL + '\1')", content)
+        content = re.sub(r"fetch\('(/api/[^']*)'\)", r"fetch(window.API_BASE_URL + '\1')", content)
+        content = re.sub(r"fetch\('(/admin/api/[^']*)',", r"fetch(window.API_BASE_URL + '\1',", content)
+        content = re.sub(r"fetch\('(/api/[^']*)',", r"fetch(window.API_BASE_URL + '\1',", content)
+        content = re.sub(r'fetch\(`(/admin/api/[^`]*)`\)', r'fetch(`${window.API_BASE_URL || ""}\1`)', content)
+        content = re.sub(r'fetch\(`(/api/[^`]*)`\)', r'fetch(`${window.API_BASE_URL || ""}\1`)', content)
+        content = re.sub(r'fetch\(`(/admin/api/[^`]*)`,', r'fetch(`${window.API_BASE_URL || ""}\1`,', content)
+        content = re.sub(r'fetch\(`(/api/[^`]*)`,', r'fetch(`${window.API_BASE_URL || ""}\1`,', content)
+        with open(_dst_admin, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"Automatically generated {_dst_admin} from {_src_admin}")
+    except Exception as e:
+        print(f"Failed to generate frontend/admin.html automatically: {e}")
 
 # Load search module once at startup for performance
 import importlib.util
@@ -37,8 +102,9 @@ from dynamic_prompts import generate_dynamic_prompts
 from translation_service import translation_service
 
 app = Flask(__name__)
+CORS(app)  # Enable Cross-Origin Resource Sharing globally
 
-CSV_PATH = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'data_with_descriptions.csv')
+CSV_PATH = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'nco_dataset_v6_final.csv')
 
 
 def _get_admin_setting(key):
@@ -200,6 +266,14 @@ def _rebuild_search_assets(rows):
     documents, metadata = _build_documents_and_metadata(rows)
     db_store.save_search_documents(documents, metadata)
 
+    # Save documents and metadata JSON files locally as well
+    processed_dir = os.path.join(os.path.dirname(__file__), 'data', 'processed')
+    os.makedirs(processed_dir, exist_ok=True)
+    with open(os.path.join(processed_dir, 'nco_documents.json'), 'w', encoding='utf-8') as f:
+        json.dump(documents, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(processed_dir, 'nco_metadata.json'), 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
+
     gn = {}
     for idx, item in enumerate(metadata):
         code = item["nco_2015"]
@@ -216,11 +290,15 @@ def _rebuild_search_assets(rows):
         gn[code] = {"sector": sector, "keywords": keywords}
     db_store.save_graph(gn)
 
+    # Save graph JSON file locally as well
+    with open(os.path.join(processed_dir, 'nco_graph.json'), 'w', encoding='utf-8') as f:
+        json.dump(gn, f, indent=2, ensure_ascii=False)
+
     from sentence_transformers import SentenceTransformer
     import numpy as np
     import faiss
 
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = SentenceTransformer("BAAI/bge-small-en-v1.5")
     embeddings = model.encode(
         documents,
         show_progress_bar=False,

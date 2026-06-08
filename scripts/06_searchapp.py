@@ -14,7 +14,7 @@ if PROJECT_DIR not in sys.path:
 
 import db_store
 
-MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_NAME = "BAAI/bge-small-en-v1.5"
 DEFAULT_TOP_K = 5
 MAX_TOP_K = 100
 CANDIDATE_K = 50   # Top FAISS candidates to filter with GN
@@ -73,7 +73,8 @@ def clean_text(text):
     return re.sub(r"[^a-z0-9\s]", "", text.lower())
 
 def embed_query(query):
-    return model.encode([query], convert_to_numpy=True, normalize_embeddings=True)
+    query_with_instruction = "Represent this sentence for searching relevant passages: " + query
+    return model.encode([query_with_instruction], convert_to_numpy=True, normalize_embeddings=True)
 
 def compute_graph_score(query, occupation_code):
     query_words = set(clean_text(query).split())
@@ -285,7 +286,8 @@ def compute_level_similarity(query, descriptions):
     if not descriptions:
         return 0.0
     
-    query_vec = model.encode([query], normalize_embeddings=True)
+    query_with_instruction = "Represent this sentence for searching relevant passages: " + query
+    query_vec = model.encode([query_with_instruction], normalize_embeddings=True)
     desc_vecs = model.encode(descriptions, normalize_embeddings=True)
     
     sims = np.dot(desc_vecs, query_vec.T)

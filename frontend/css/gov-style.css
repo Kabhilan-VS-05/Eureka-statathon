@@ -792,12 +792,6 @@ main h1 {
   z-index: 10001;
 }
 
-.ambiguity-content h3 {
-  color: #003366;
-  margin-top: 0;
-  font-size: 18px;
-}
-
 .ambiguity-content p {
   color: #555;
   margin: 15px 0 25px;

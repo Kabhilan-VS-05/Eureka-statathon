@@ -18,7 +18,7 @@ Current runtime mode:
 
 ## 2) Tech Stack
 - Backend: Python, Flask
-- Retrieval/ML: `sentence-transformers` (`all-MiniLM-L6-v2`), `faiss-cpu`, `numpy`
+- Retrieval/ML: `sentence-transformers` (`BAAI/bge-small-en-v1.5`), `faiss-cpu`, `numpy`
 - Data utilities: `pandas`, `csv`, `json`
 - Translation + language detection: `requests`, `langdetect`
 - Storage: PostgreSQL for occupations, admin settings/password hash, prompt history, semantic documents, graph data, embeddings, and serialized FAISS index bytes
@@ -52,7 +52,7 @@ Dependencies declared in `requirements.txt`:
 - `utils/dynamic_prompts.py`: dynamic prompt generation based on occupation title/category
 - `utils/analyze_occupations.py`: exploratory analysis utility
 - `utils/debug_search.py`: quick debug search utility
-- `data/raw/data_with_descriptions.csv`: previous import source for migration
+- `data/raw/nco_dataset_v6_final.csv`: previous import source for migration
 - `data/processed/*.json`: previous import source for migration/history
 - `models/*`: legacy local artifacts no longer used by runtime
 - `data/admin.db`: previous admin settings source for migration
@@ -62,7 +62,7 @@ Dependencies declared in `requirements.txt`:
 ## 4) Data Model and Artifacts
 ### Primary source-of-truth data
 - PostgreSQL table: `occupations`
-- Previous CSV import source: `data/raw/data_with_descriptions.csv`
+- Previous CSV import source: `data/raw/nco_dataset_v6_final.csv`
 - Important columns used:
   - `S No`
   - `Occupational Title`
@@ -100,7 +100,7 @@ Dependencies declared in `requirements.txt`:
 
 ### Hybrid scoring in `06_searchapp.py`
 For each query:
-1. Encode query using SBERT model (`all-MiniLM-L6-v2`).
+1. Encode query using SBERT/BGE model (`BAAI/bge-small-en-v1.5`) with query instruction prepended.
 2. Search two FAISS indexes:
    - Full occupation document index
    - Title-only index

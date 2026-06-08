@@ -10,7 +10,7 @@ if PROJECT_DIR not in sys.path:
 import db_store
 
 
-MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 
 if __name__ == "__main__":
