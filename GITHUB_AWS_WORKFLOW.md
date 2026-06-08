@@ -104,7 +104,13 @@ If you are already on the branch and just want to download the newest commits yo
 git pull origin Kabhilan
 ```
 
-### Step 4: Restart the Flask Backend
+### Step 4: Install Python Dependencies (If Changed)
+If your latest pull includes changes to `requirements.txt` (like adding new packages), install them using pip. On newer Ubuntu versions, you must pass the `--break-system-packages` flag to override the external environment protection:
+```bash
+pip3 install -r requirements.txt --break-system-packages
+```
+
+### Step 5: Restart the Flask Backend
 For your new code to take effect (especially Python backend code changes in `app.py`), you must restart the system daemon that runs your web app.
 ```bash
 sudo systemctl restart nco-backend
@@ -126,5 +132,6 @@ git push origin Kabhilan
 ```bash
 cd /var/www/nco-backend
 git pull origin Kabhilan
+pip3 install -r requirements.txt --break-system-packages  # (Only if you added new packages)
 sudo systemctl restart nco-backend
 ```
