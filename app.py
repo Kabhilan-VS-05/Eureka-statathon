@@ -400,7 +400,7 @@ def search_jobs():
             if user_language and not user_language.startswith("en"):
                 lang_code = user_language.split("-")[0]
                 try:
-                    translated_query = translation_service.translate_with_lingua(query, source_lang=lang_code, target_lang="en")
+                    translated_query = translation_service.translate(query, source_lang=lang_code, target_lang="en")
                     if translated_query.lower() != query.lower():
                         translation_notice = {
                             "original": query,

@@ -8,3 +8,11 @@ __pycache__/
 
 # Temporary files
 .tmp_pdf_pages/
+
+# Sensitive
+*.pem
+
+# Legacy artifacts
+data/admin.db
+models/
+data/processed/

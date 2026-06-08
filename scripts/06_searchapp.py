@@ -73,7 +73,12 @@ def clean_text(text):
     return re.sub(r"[^a-z0-9\s]", "", text.lower())
 
 def embed_query(query):
-    query_with_instruction = "Represent this sentence for searching relevant passages: " + query
+    # Enhance broad queries (e.g. "Agriculture") by adding context so they map to occupations
+    enhanced_query = query
+    if not any(w in query.lower() for w in ["job", "occupation", "worker", "professional"]):
+        enhanced_query += " occupation"
+        
+    query_with_instruction = "Represent this sentence for searching relevant passages: " + enhanced_query
     return model.encode([query_with_instruction], convert_to_numpy=True, normalize_embeddings=True)
 
 def compute_graph_score(query, occupation_code):
@@ -184,24 +189,10 @@ def search(query, top_k=DEFAULT_TOP_K):
         details = job_details.get(occ_code, {})
         base_score = ALPHA * float(semantic_score) + BETA * gn_score
 
-        # apply global multiplier
-        boosted = base_score * 1.8
-
-        # title-based boost for exact or overlapping queries
-        title = metadata[idx]["occupation_title"]
-        q_clean = clean_text(query)
-        title_clean = clean_text(title)
-        q_words = set(q_clean.split())
-        title_words = set(title_clean.split())
-
-        boost_factor = 1.0
-        if title_clean == q_clean or title_words.issubset(q_words) or q_words.issubset(title_words):
-            boost_factor = 1.6
-        elif len(q_words & title_words) > 0:
-            boost_factor = 1.25
-
-        semantic_final = boosted * boost_factor
-        title_final = title_score * 1.15
+        # Use true raw scores without artificial inflation
+        semantic_final = base_score
+        title_final = float(title_score)
+        
         final_score = min(max(semantic_final, title_final), 1.0)
         
         candidates.append({

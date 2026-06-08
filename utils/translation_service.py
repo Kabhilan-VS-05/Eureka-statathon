@@ -1,6 +1,7 @@
 import requests
 import json
 import logging
+import os
 from typing import Optional, Dict, Any
 from langdetect import detect, detect_langs, LangDetectException
 
@@ -12,17 +13,12 @@ class TranslationService:
     """Translation service that uses LibreTranslate and Bhashini APIs"""
     
     def __init__(self):
-        # LibreTranslate API configuration
-        self.libretranslate_urls = [
-            "https://libretranslate.de/translate",  # Primary
-            "https://lt.vern.cc/translate",  # Fallback 1
-            "https://libretranslate.com/translate",  # Fallback 2
-        ]
+        # Removed libretranslate urls
         
         # Bhashini API configuration
         self.bhashini_base_url = "https://meity-auth.ulcacontrib.org/ulca/apis/v0"
-        self.bhashini_api_key = None  # Set your Bhashini API key here
-        self.bhashini_user_id = None  # Set your Bhashini user ID here
+        self.bhashini_api_key = os.getenv("BHASHINI_API_KEY")
+        self.bhashini_user_id = os.getenv("BHASHINI_USER_ID")
     
     def set_bhashini_credentials(self, api_key: str, user_id: str):
         """Set Bhashini API credentials"""
@@ -81,130 +77,40 @@ class TranslationService:
         lang, _, _ = self.detect_language_with_confidence(text)
         return lang
     
-    def translate_with_lingua(self, text: str, source_lang: str = "auto", target_lang: str = "en") -> str:
+    def translate_with_google(self, text: str, source_lang: str = "auto", target_lang: str = "en") -> str:
         """
-        Fast translation using MyMemory first, then LibreTranslate as fallback
-        Skips translation if text is already in target language
-        Args:
-            text: Text to translate
-            source_lang: Source language code (default: "auto")
-            target_lang: Target language code (default: "en")
-        Returns:
-            Translated text or original text if translation fails
+        Translate using Google Translate (via deep-translator package)
         """
-        # Detect language if source is auto
         if source_lang == "auto":
             detected_lang = self.detect_language(text)
-            
-            # If already in target language, skip translation
-            if detected_lang == target_lang or detected_lang == target_lang[:2]:  # Handle 'en' vs 'en-US'
+            if detected_lang == target_lang or detected_lang == target_lang[:2]:
                 logger.info(f"Text is already in {target_lang}, skipping translation")
                 return text
-            
             source_lang = detected_lang
         
-        # Also check if source_lang is already English
         if source_lang == "en" or source_lang.startswith("en"):
             logger.info(f"Source language is English, skipping translation")
             return text
-        
-        # Try MyMemory API first (fastest)
-        logger.info(f"Translating from {source_lang} to {target_lang} using MyMemory...")
-        translated = self._try_mymemory_translation(text, source_lang, target_lang)
-        if translated:
-            # Stop here even if text unchanged - MyMemory is the fastest
-            logger.info(f"MyMemory returned result (even if unchanged), skipping fallbacks")
-            return translated
-        
-        # Try LibreTranslate instances as fallback only if MyMemory failed/timed out
-        logger.warning(f"MyMemory failed, trying LibreTranslate fallbacks...")
-        for i, url in enumerate(self.libretranslate_urls):
-            logger.info(f"Trying LibreTranslate instance {i+1}: {url}")
-            translated = self._try_libretranslate_translation(text, source_lang, target_lang, url)
-            if translated:
-                return translated
-        
-        # If all translation attempts fail, return original text
-        logger.warning(f"All translation services failed, returning original text")
-        return text
-    
-    def _try_libretranslate_translation(self, text: str, source_lang: str, target_lang: str, url: str) -> Optional[str]:
-        """
-        Try to translate using LibreTranslate API
-        Args:
-            text: Text to translate
-            source_lang: Source language code
-            target_lang: Target language code
-            url: LibreTranslate endpoint URL
-        Returns:
-            Translated text or None if failed
-        """
-        try:
-            payload = {
-                "q": text,
-                "source": source_lang if source_lang != "auto" else "auto",
-                "target": target_lang
-            }
-            response = requests.post(url, json=payload, timeout=5)
             
-            if response.status_code == 200:
-                data = response.json()
-                translated = data.get('translatedText', text)
-                logger.info(f"LibreTranslate translation successful: '{text[:50]}' -> '{translated[:50]}'")
+        logger.info(f"Translating from {source_lang} to {target_lang} using Google Translate...")
+        try:
+            from deep_translator import GoogleTranslator
+            google_source = source_lang if source_lang != "auto" else "auto"
+            translator = GoogleTranslator(source=google_source, target=target_lang)
+            translated = translator.translate(text)
+            
+            if translated and translated.strip().lower() != text.strip().lower():
+                logger.info(f"Google translation successful: '{text[:40]}' -> '{translated[:40]}'")
                 return translated
             else:
-                logger.warning(f"LibreTranslate API error: {response.status_code} from {url}")
-                return None
-                
-        except requests.exceptions.Timeout:
-            logger.warning(f"LibreTranslate API timeout from {url}")
-            return None
+                logger.warning(f"Google translation returned unchanged text")
+                return text
+        except ImportError:
+            logger.error("deep-translator is not installed. Please run: pip install deep-translator")
+            return text
         except Exception as e:
-            logger.warning(f"LibreTranslate translation error from {url}: {str(e)}")
-            return None
-    
-    def _try_mymemory_translation(self, text: str, source_lang: str, target_lang: str) -> Optional[str]:
-        """
-        Try to translate using MyMemory API (free translation service) - FAST
-        Args:
-            text: Text to translate
-            source_lang: Source language code
-            target_lang: Target language code
-        Returns:
-            Translated text or None if failed
-        """
-        # Map language codes to MyMemory format if needed
-        mymemory_source = source_lang if source_lang != "auto" else "auto"
-        mymemory_target = target_lang
-        
-        try:
-            url = "https://api.mymemory.translated.net/get"
-            params = {
-                "q": text,
-                "langpair": f"{mymemory_source}|{mymemory_target}"
-            }
-            # Reduced timeout from 5 to 3 seconds for faster failure detection
-            response = requests.get(url, params=params, timeout=3)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("responseStatus") == 200:
-                    translated = data.get("responseData", {}).get("translatedText", text)
-                    logger.info(f"MyMemory translation successful: '{text[:40]}' -> '{translated[:40]}'")
-                    return translated
-                else:
-                    logger.warning(f"MyMemory API error: {data.get('responseStatus')}")
-                    return None
-            else:
-                logger.warning(f"MyMemory API error: HTTP {response.status_code}")
-                return None
-                
-        except requests.exceptions.Timeout:
-            logger.warning(f"MyMemory API timeout (>3s)")
-            return None
-        except Exception as e:
-            logger.warning(f"MyMemory translation error: {str(e)}")
-            return None
+            logger.error(f"Google translation error: {str(e)}")
+            return text
     
     def translate_with_bhashini(self, text: str, source_lang: str = "auto", target_lang: str = "en") -> str:
         """
@@ -287,14 +193,14 @@ class TranslationService:
             return text
     
     def translate(self, text: str, source_lang: str = "auto", target_lang: str = "en", 
-                  preferred_service: str = "lingua") -> str:
+                  preferred_service: str = "bhashini") -> str:
         """
-        Translate text using preferred service with fallback
+        Translate text with Bhashini primary and Google fallback
         Args:
             text: Text to translate
             source_lang: Source language code
             target_lang: Target language code
-            preferred_service: Preferred service ("lingua" or "bhashini")
+            preferred_service: Kept for compatibility, defaults to "bhashini"
         Returns:
             Translated text or original text if all services fail
         """
@@ -303,19 +209,14 @@ class TranslationService:
         
         text = text.strip()
         
-        # Try preferred service first
-        if preferred_service == "bhashini":
-            result = self.translate_with_bhashini(text, source_lang, target_lang)
-            if result != text:  # Translation successful
-                return result
-            # Fallback to Lingua
-            return self.translate_with_lingua(text, source_lang, target_lang)
-        else:
-            result = self.translate_with_lingua(text, source_lang, target_lang)
-            if result != text:  # Translation successful
-                return result
-            # Fallback to Bhashini
-            return self.translate_with_bhashini(text, source_lang, target_lang)
+        # Try Bhashini first (highly accurate for Indian languages)
+        result = self.translate_with_bhashini(text, source_lang, target_lang)
+        if result and result.strip().lower() != text.strip().lower():  # Translation successful
+            return result
+            
+        # Fallback to Google Translate if Bhashini failed or returned unchanged text
+        logger.info("Bhashini translation failed or skipped, falling back to Google Translate")
+        return self.translate_with_google(text, source_lang, target_lang)
     
     def get_supported_languages(self) -> Dict[str, str]:
         """
