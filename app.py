@@ -84,6 +84,16 @@ if os.path.exists(_src_admin):
     except Exception as e:
         print(f"Failed to generate frontend/admin.html automatically: {e}")
 
+_src_css = os.path.join(os.path.dirname(__file__), 'static', 'gov-style.css')
+_dst_css = os.path.join(os.path.dirname(__file__), 'frontend', 'css', 'gov-style.css')
+if os.path.exists(_src_css):
+    os.makedirs(os.path.dirname(_dst_css), exist_ok=True)
+    try:
+        shutil.copy2(_src_css, _dst_css)
+        print(f"Automatically copied {_src_css} to {_dst_css}")
+    except Exception as e:
+        print(f"Failed to copy CSS: {e}")
+
 # Load search module once at startup for performance
 import importlib.util
 spec = importlib.util.spec_from_file_location("searchapp", os.path.join(os.path.dirname(__file__), 'scripts', '06_searchapp.py'))
@@ -382,36 +392,23 @@ def search_jobs():
                     "top_k": top_k
                 })
 
-            # Check for language ambiguity
-            detected_lang, is_ambiguous, alternative_lang = translation_service.detect_language_with_confidence(query)
+            # Manual language translation (translate only if user_language is provided and is not English)
+            translated_query = query
+            translation_notice = None
             language_ambiguity = None
             
-            if is_ambiguous and not user_language:
-                # If ambiguous and user hasn't confirmed, ask user to select
-                language_ambiguity = {
-                    "is_ambiguous": True,
-                    "primary_lang": detected_lang,
-                    "alternative_lang": alternative_lang,
-                    "message": f"Is this {detected_lang.upper()} or {alternative_lang.upper()}?"
-                }
-                # Return search with English results first as preview
-                translated_query = translation_service.translate_with_lingua(query, source_lang="auto", target_lang="en")
-            elif user_language:
-                # User confirmed language, use it
-                detected_lang = user_language
-                translated_query = translation_service.translate_with_lingua(query, source_lang=user_language, target_lang="en")
-            else:
-                # No ambiguity, proceed normally
-                translated_query = translation_service.translate_with_lingua(query, source_lang="auto", target_lang="en")
-            
-            # Check if translation occurred
-            translation_notice = None
-            if translated_query.lower() != query.lower():
-                translation_notice = {
-                    "original": query,
-                    "translated": translated_query,
-                    "message": f"Query translated from original text"
-                }
+            if user_language and not user_language.startswith("en"):
+                lang_code = user_language.split("-")[0]
+                try:
+                    translated_query = translation_service.translate_with_lingua(query, source_lang=lang_code, target_lang="en")
+                    if translated_query.lower() != query.lower():
+                        translation_notice = {
+                            "original": query,
+                            "translated": translated_query,
+                            "message": f"Query translated from original text"
+                        }
+                except Exception as ex:
+                    print(f"Translation failed: {ex}")
             
             # Use the search function for specific queries
             results = search_module.search(translated_query, top_k=top_k)

@@ -115,7 +115,7 @@
               <div class="modern-search-bar">
                 <textarea
                   id="occupationSearch"
-                  placeholder=""
+                  placeholder="Search by Occupation... (Enter to search, Shift+Enter for new line)"
                   rows="1"
                 ></textarea>
                 <button id="micBtn" class="mic-button" title="Voice Search">
@@ -226,26 +226,7 @@
             <span id="translationText"></span>
           </div>
         </div>
-        <div
-          id="languageAmbiguityDialog"
-          class="language-ambiguity-dialog hidden"
-        >
-          <div class="ambiguity-overlay"></div>
-          <div class="ambiguity-content">
-            <h3>Language Detection</h3>
-            <p id="ambiguityMessage"></p>
-            <div class="ambiguity-buttons">
-              <button
-                class="ambiguity-btn primary"
-                id="ambiguityPrimaryBtn"
-              ></button>
-              <button
-                class="ambiguity-btn secondary"
-                id="ambiguitySecondaryBtn"
-              ></button>
-            </div>
-          </div>
-        </div>
+
         <div class="results-container" id="resultsContainer">
           <div class="results-header">
             <h2 id="resultsTitle">Search Results</h2>
@@ -287,6 +268,7 @@
       const ncoCodeInput = document.getElementById("ncoCodeInput");
       const ncoDigits = Array.from(document.querySelectorAll(".nco-digit"));
       const resultsBody = document.getElementById("resultsBody");
+      const resultsTable = document.querySelector(".results-table");
       const resultsTableHead = document.querySelector(".results-table thead");
       const showMoreBtn = document.getElementById("showMoreBtn");
       const searchStatus = document.getElementById("searchStatus");
@@ -385,6 +367,7 @@
 
       async function loadDirectory() {
         directoryMode = true;
+        resultsTable.classList.add("directory-table");
         searchStatus.classList.remove("hidden");
         document.getElementById("translationNotice").classList.add("hidden");
         suggestionBox.classList.add("hidden");
@@ -498,162 +481,7 @@
         });
       });
 
-      // --- Language Ambiguity Handler ---
-      function showLanguageAmbiguityDialog(ambiguity) {
-        const dialog = document.getElementById("languageAmbiguityDialog");
-        const message = document.getElementById("ambiguityMessage");
-        const primaryBtn = document.getElementById("ambiguityPrimaryBtn");
-        const secondaryBtn = document.getElementById("ambiguitySecondaryBtn");
 
-        const langNames = {
-          en: "English",
-          hi: "Hindi",
-          ta: "Tamil",
-          te: "Telugu",
-          kn: "Kannada",
-          ml: "Malayalam",
-          bn: "Bengali",
-          pa: "Punjabi",
-          gu: "Gujarati",
-          mr: "Marathi",
-          ur: "Urdu",
-        };
-
-        message.textContent = `Is this ${
-          langNames[ambiguity.primary_lang] || ambiguity.primary_lang
-        } or ${
-          langNames[ambiguity.alternative_lang] || ambiguity.alternative_lang
-        }?`;
-        primaryBtn.textContent =
-          langNames[ambiguity.primary_lang] || ambiguity.primary_lang;
-        secondaryBtn.textContent =
-          langNames[ambiguity.alternative_lang] || ambiguity.alternative_lang;
-
-        primaryBtn.onclick = () => {
-          selectedLanguage = ambiguity.primary_lang;
-          dialog.classList.add("hidden");
-          performSearchWithLanguage(currentQuery, selectedLanguage);
-        };
-
-        secondaryBtn.onclick = () => {
-          selectedLanguage = ambiguity.alternative_lang;
-          dialog.classList.add("hidden");
-          performSearchWithLanguage(currentQuery, selectedLanguage);
-        };
-
-        dialog.classList.remove("hidden");
-      }
-
-      async function performSearchWithLanguage(query, userLanguage) {
-        // Show status and hide results
-        searchStatus.classList.remove("hidden");
-        document.getElementById("resultsContainer").classList.add("hidden");
-        document.getElementById("translationNotice").classList.add("hidden");
-        showMoreBtn.classList.add("hidden");
-        pigsBox.classList.add("hidden");
-        document.getElementById("guidanceContainer").classList.add("hidden");
-
-        try {
-          const requestedTopK = getTopK();
-          const fetchPromise = fetch(`/api/search?top_k=${requestedTopK}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              query: searchMode === "nco" ? formatNcoCode(query) : query,
-              user_language: userLanguage,
-              search_mode: searchMode,
-              top_k: requestedTopK,
-            }),
-          }).then((res) => res.json());
-
-          const delayPromise = new Promise((resolve) =>
-            setTimeout(resolve, 1000)
-          );
-
-          // Wait for both the fetch and the delay
-          const [data] = await Promise.all([fetchPromise, delayPromise]);
-
-          // Hide status and show results
-          searchStatus.classList.add("hidden");
-          document
-            .getElementById("resultsContainer")
-            .classList.remove("hidden");
-
-          // Show translation notice if translation occurred
-          if (data.translation_notice && searchMode !== "nco") {
-            const notice = data.translation_notice;
-            const translationText = document.getElementById("translationText");
-            translationText.innerHTML = `<strong>Translated:</strong> "${notice.original}" → "${notice.translated}"`;
-            document
-              .getElementById("translationNotice")
-              .classList.remove("hidden");
-          }
-
-          let hasGuidance = false;
-          // Handle suggestions
-          if (data.suggestion) {
-            suggestionBox.innerHTML = `<strong>Search Help</strong><br>${data.suggestion}`;
-            suggestionBox.classList.remove("hidden");
-            hasGuidance = true;
-          } else {
-            suggestionBox.classList.add("hidden");
-          }
-
-          // --- PIGS: Prompt Intelligence & Guidance System ---
-          if (data.pigs && data.pigs.suggestions && data.pigs.suggestions.length > 0) {
-            let pigsHtml = `<strong>Prompt Intelligence & Guidance System</strong><br>`;
-            if (data.pigs.prompt_examples && data.pigs.prompt_examples.length > 0) {
-              pigsHtml += `<div style="margin-top:8px;"><strong>Related prompt examples:</strong></div>`;
-              pigsHtml += `<ul style="margin-top:6px; padding-left:18px;">`;
-              data.pigs.prompt_examples.forEach((prompt) => {
-                pigsHtml += `<li>"${prompt}"</li>`;
-              });
-              pigsHtml += `</ul>`;
-            }
-            pigsHtml += `<div style="margin-top:8px;"><strong>Why these results:</strong></div>`;
-            pigsHtml += `<ul style="margin-top:8px; padding-left:18px;">`;
-            data.pigs.suggestions.forEach((s) => {
-              pigsHtml += `<li>${s}</li>`;
-            });
-            pigsHtml += `</ul>`;
-
-            pigsBox.innerHTML = pigsHtml;
-            pigsBox.classList.remove("hidden");
-            hasGuidance = true;
-          } else {
-            pigsBox.classList.add("hidden");
-          }
-
-          const guidanceContainer = document.getElementById("guidanceContainer");
-          if (hasGuidance) {
-            guidanceContainer.classList.remove("hidden");
-            guidanceContainer.removeAttribute("open");
-          } else {
-            guidanceContainer.classList.add("hidden");
-          }
-
-          if (data.results && data.results.length > 0) {
-            allResults = data.results;
-            lastRequestedTopK = data.top_k || getTopK();
-            lastReturnedCount = data.returned_count || data.results.length;
-            displayedCount = 0;
-            displayResults(false);
-          } else {
-            allResults = [];
-            document.getElementById("resultsCount").textContent = "";
-            resultsBody.innerHTML =
-              '<tr><td colspan="5">No results found.</td></tr>';
-          }
-        } catch (error) {
-          console.error("Search error:", error);
-          searchStatus.classList.add("hidden");
-          document
-            .getElementById("resultsContainer")
-            .classList.remove("hidden");
-          resultsBody.innerHTML =
-            '<tr><td colspan="5">An error occurred.</td></tr>';
-        }
-      }
 
       // --- Search Logic ---
       async function performSearch(isShowMore) {
@@ -680,25 +508,25 @@
         currentQuery = query;
         selectedLanguage = null;
         directoryMode = false;
+        resultsTable.classList.remove("directory-table");
 
         // Show status and hide results
         searchStatus.classList.remove("hidden");
         document.getElementById("resultsContainer").classList.add("hidden");
         document.getElementById("translationNotice").classList.add("hidden");
-        document
-          .getElementById("languageAmbiguityDialog")
-          .classList.add("hidden");
         showMoreBtn.classList.add("hidden");
         pigsBox.classList.add("hidden");
         document.getElementById("guidanceContainer").classList.add("hidden");
 
         try {
           const requestedTopK = getTopK();
+          const selectedLang = languageSelect.value;
           const fetchPromise = fetch(`/api/search?top_k=${requestedTopK}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               query: searchMode === "nco" ? formatNcoCode(query) : query,
+              user_language: selectedLang,
               search_mode: searchMode,
               top_k: requestedTopK,
             }),
@@ -710,24 +538,6 @@
 
           // Wait for both the fetch and the delay
           const [data] = await Promise.all([fetchPromise, delayPromise]);
-
-          // Check for language ambiguity first
-          if (data.language_ambiguity && data.language_ambiguity.is_ambiguous) {
-            searchStatus.classList.add("hidden");
-            showLanguageAmbiguityDialog(data.language_ambiguity);
-            // Show preview results in English while dialog is shown
-            document
-              .getElementById("resultsContainer")
-              .classList.remove("hidden");
-            if (data.results && data.results.length > 0) {
-              allResults = data.results;
-              lastRequestedTopK = data.top_k || getTopK();
-              lastReturnedCount = data.returned_count || data.results.length;
-              displayedCount = 0;
-              displayResults(false);
-            }
-            return;
-          }
 
           // Hide status and show results
           searchStatus.classList.add("hidden");

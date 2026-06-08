@@ -2086,10 +2086,79 @@
           .nco-premium-layout {
             flex-direction: column;
             height: auto;
+            gap: 15px;
           }
           .nco-premium-sidebar {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-height: none !important;
+          }
+          .nco-canvas-wrapper {
+            height: 480px !important;
+            min-height: 480px !important;
+          }
+          .nco-top-bar {
+            flex-direction: column !important;
+            gap: 10px !important;
+            align-items: stretch !important;
+            padding: 10px 14px !important;
+          }
+          .nco-top-bar > div {
+            display: flex;
+            justify-content: space-between;
             width: 100%;
-            min-width: 0;
+          }
+          .nco-top-bar button {
+            flex: 1;
+            text-align: center;
+          }
+          
+          /* Native-style mobile bottom sheet for details panel */
+          .nco-detail-floating {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            top: auto !important;
+            width: 100% !important;
+            border-radius: 24px 24px 0 0 !important;
+            max-height: 55vh !important;
+            padding: 24px 20px 20px 20px !important;
+            box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.15) !important;
+            background-color: #ffffff !important;
+            z-index: 1050 !important;
+            transform: translateY(120%) !important;
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            pointer-events: auto !important;
+            border: none !important;
+          }
+          .nco-detail-floating.active {
+            transform: translateY(0) !important;
+          }
+          
+          /* Visual drag bar handle for mobile bottom sheet */
+          .nco-detail-floating::before {
+            content: "";
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 44px;
+            height: 5px;
+            background-color: #cbd5e1;
+            border-radius: 99px;
+          }
+          
+          /* Relocate legend to top-left to prevent overlap on bottom sheet detail panel */
+          .legend-container {
+            position: absolute !important;
+            top: 12px !important;
+            left: 12px !important;
+            bottom: auto !important;
+            right: auto !important;
+            max-height: 110px !important;
+            padding: 8px !important;
+            font-size: 10px !important;
           }
         }
     </style>

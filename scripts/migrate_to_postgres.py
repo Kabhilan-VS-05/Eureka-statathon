@@ -86,6 +86,16 @@ if os.path.exists(_src_admin):
     except Exception as e:
         print(f"Failed to generate frontend/admin.html automatically: {e}")
 
+_src_css = os.path.join(PROJECT_DIR, 'static', 'gov-style.css')
+_dst_css = os.path.join(PROJECT_DIR, 'frontend', 'css', 'gov-style.css')
+if os.path.exists(_src_css):
+    os.makedirs(os.path.dirname(_dst_css), exist_ok=True)
+    try:
+        shutil.copy2(_src_css, _dst_css)
+        print(f"Automatically copied {_src_css} to {_dst_css}")
+    except Exception as e:
+        print(f"Failed to copy CSS: {e}")
+
 
 
 def safe_text(value):

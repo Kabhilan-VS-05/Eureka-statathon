@@ -1,2 +1,1 @@
-// standalone frontend API Configuration
-window.API_BASE_URL = 'http://localhost:5000';
+window.API_BASE_URL = 'http://3.110.167.154';
