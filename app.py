@@ -33,66 +33,7 @@ if os.path.exists(_root_csv):
     except Exception as e:
         print(f"Failed to move CSV automatically: {e}")
 
-# Auto-generate decoupled frontend assets
-_src_index = os.path.join(os.path.dirname(__file__), 'templates', 'index.html')
-_dst_index = os.path.join(os.path.dirname(__file__), 'frontend', 'index.html')
-if os.path.exists(_src_index):
-    os.makedirs(os.path.dirname(_dst_index), exist_ok=True)
-    try:
-        with open(_src_index, 'r', encoding='utf-8') as f:
-            content = f.read()
-        content = content.replace("{{ url_for('static', filename='gov-style.css') }}", "css/gov-style.css")
-        content = content.replace('{{ url_for("static", filename="gov-style.css") }}', 'css/gov-style.css')
-        if 'js/config.js' not in content:
-            content = content.replace('</head>', '  <script src="js/config.js"></script>\n  </head>')
-        content = re.sub(r'fetch\("(/api/[^"]*)"\)', r'fetch(window.API_BASE_URL + "\1")', content)
-        content = re.sub(r'fetch\("(/api/[^"]*)",', r'fetch(window.API_BASE_URL + "\1",', content)
-        content = re.sub(r"fetch\('(/api/[^']*)'\)", r"fetch(window.API_BASE_URL + '\1')", content)
-        content = re.sub(r"fetch\('(/api/[^']*)',", r"fetch(window.API_BASE_URL + '\1',", content)
-        content = re.sub(r'fetch\(`(/api/[^`]*)`\)', r'fetch(`${window.API_BASE_URL || ""}\1`)', content)
-        content = re.sub(r'fetch\(`(/api/[^`]*)`,', r'fetch(`${window.API_BASE_URL || ""}\1`,', content)
-        with open(_dst_index, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"Automatically generated {_dst_index} from {_src_index}")
-    except Exception as e:
-        print(f"Failed to generate frontend/index.html automatically: {e}")
 
-_src_admin = os.path.join(os.path.dirname(__file__), 'templates', 'admin', 'dashboard.html')
-_dst_admin = os.path.join(os.path.dirname(__file__), 'frontend', 'admin.html')
-if os.path.exists(_src_admin):
-    os.makedirs(os.path.dirname(_dst_admin), exist_ok=True)
-    try:
-        with open(_src_admin, 'r', encoding='utf-8') as f:
-            content = f.read()
-        if 'js/config.js' not in content:
-            content = content.replace('</head>', '  <script src="js/config.js"></script>\n  </head>')
-        content = re.sub(r'fetch\("(/admin/api/[^"]*)"\)', r'fetch(window.API_BASE_URL + "\1")', content)
-        content = re.sub(r'fetch\("(/api/[^"]*)"\)', r'fetch(window.API_BASE_URL + "\1")', content)
-        content = re.sub(r'fetch\("(/admin/api/[^"]*)",', r'fetch(window.API_BASE_URL + "\1",', content)
-        content = re.sub(r'fetch\("(/api/[^"]*)",', r'fetch(window.API_BASE_URL + "\1",', content)
-        content = re.sub(r"fetch\('(/admin/api/[^']*)'\)", r"fetch(window.API_BASE_URL + '\1')", content)
-        content = re.sub(r"fetch\('(/api/[^']*)'\)", r"fetch(window.API_BASE_URL + '\1')", content)
-        content = re.sub(r"fetch\('(/admin/api/[^']*)',", r"fetch(window.API_BASE_URL + '\1',", content)
-        content = re.sub(r"fetch\('(/api/[^']*)',", r"fetch(window.API_BASE_URL + '\1',", content)
-        content = re.sub(r'fetch\(`(/admin/api/[^`]*)`\)', r'fetch(`${window.API_BASE_URL || ""}\1`)', content)
-        content = re.sub(r'fetch\(`(/api/[^`]*)`\)', r'fetch(`${window.API_BASE_URL || ""}\1`)', content)
-        content = re.sub(r'fetch\(`(/admin/api/[^`]*)`,', r'fetch(`${window.API_BASE_URL || ""}\1`,', content)
-        content = re.sub(r'fetch\(`(/api/[^`]*)`,', r'fetch(`${window.API_BASE_URL || ""}\1`,', content)
-        with open(_dst_admin, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"Automatically generated {_dst_admin} from {_src_admin}")
-    except Exception as e:
-        print(f"Failed to generate frontend/admin.html automatically: {e}")
-
-_src_css = os.path.join(os.path.dirname(__file__), 'static', 'gov-style.css')
-_dst_css = os.path.join(os.path.dirname(__file__), 'frontend', 'css', 'gov-style.css')
-if os.path.exists(_src_css):
-    os.makedirs(os.path.dirname(_dst_css), exist_ok=True)
-    try:
-        shutil.copy2(_src_css, _dst_css)
-        print(f"Automatically copied {_src_css} to {_dst_css}")
-    except Exception as e:
-        print(f"Failed to copy CSS: {e}")
 
 # Load search module once at startup for performance
 import importlib.util
@@ -103,11 +44,8 @@ if spec and spec.loader:
 else:
     raise RuntimeError("Failed to load search module")
 
-# Import PIGS analyzer from search module
-pigs_analyze_prompt = getattr(search_module, "pigs_analyze_prompt", None)
-
-# Import dynamic prompt generation system
-from dynamic_prompts import generate_dynamic_prompts
+# Import dynamic prompt generation system and PIGS
+from dynamic_prompts import generate_dynamic_prompts, pigs_v2_analyze, pigs_analyze_prompt
 # Import translation service
 from translation_service import translation_service
 
@@ -374,6 +312,7 @@ def search_jobs():
     query = data.get('query', '').strip()
     user_language = data.get('user_language', None)  # User's confirmed language
     search_mode = data.get('search_mode', 'general')
+    filters = data.get('filters', {})
     try:
         top_k = int(data.get('top_k', request.args.get('top_k', 5)))
     except (TypeError, ValueError):
@@ -382,6 +321,19 @@ def search_jobs():
     
     try:
         if query:
+            spelling_correction = None
+            if search_mode == "general":
+                close_matches = db_store.get_spelling_suggestions(query, limit=1)
+                if close_matches and close_matches[0].lower() != query.lower():
+                    import difflib
+                    ratio = difflib.SequenceMatcher(None, query.lower(), close_matches[0].lower()).ratio()
+                    if ratio >= 0.7:  # high confidence match
+                        spelling_correction = {
+                            "original": query,
+                            "corrected": close_matches[0]
+                        }
+                        query = close_matches[0]
+
             if search_mode == "nco":
                 results = _search_by_nco_code(query)[:top_k]
                 return jsonify({
@@ -389,7 +341,8 @@ def search_jobs():
                     "suggestion": None,
                     "translation_notice": None,
                     "language_ambiguity": None,
-                    "top_k": top_k
+                    "top_k": top_k,
+                    "spelling_correction": spelling_correction
                 })
 
             # Manual language translation (translate only if user_language is provided and is not English)
@@ -411,35 +364,33 @@ def search_jobs():
                     print(f"Translation failed: {ex}")
             
             # Use the search function for specific queries
-            results = search_module.search(translated_query, top_k=top_k)
+            results = search_module.search(translated_query, top_k=top_k, filters=filters)
             for r in results:
                 if "nco_code" in r:
                     r["nco_code"] = _normalize_nco_code(r.get("nco_code"))
 
-            # ------------------ PIGS ANALYSIS ------------------
+            # ------------------ PIGS v2 ANALYSIS ------------------
             pigs_output = None
-
-            if pigs_analyze_prompt and results:
+            if pigs_v2_analyze and results:
                 try:
-                    level_scores, pigs_suggestions = pigs_analyze_prompt(translated_query, results)
-                    prompt_examples = generate_dynamic_prompts(
-                        results[0].get('occupation_title', 'professional')
-                    )
-                    pigs_output = {
-                        "level_scores": level_scores,
-                        "suggestions": pigs_suggestions,
-                        "prompt_examples": prompt_examples
-                    }
+                    pigs_output = pigs_v2_analyze(translated_query, results)
                 except Exception:
                     pigs_output = None
 
             try:
+                detected_lang = "English"
+                if translated_query.lower() != query.lower():
+                    lang_code = (user_language or "en").split("-")[0].lower()
+                    supported_langs = translation_service.get_supported_languages()
+                    detected_lang = supported_langs.get(lang_code, "Other")
+
                 top = results[0] if results else {}
                 _append_prompt_history_entry({
                     "ts": datetime.now(timezone.utc).isoformat(),
                     "query": query,
                     "translated_query": translated_query,
                     "was_translated": translated_query.lower() != query.lower(),
+                    "detected_language": detected_lang,
                     "occupation_title": top.get('occupation_title', ''),
                     "nco_code": top.get('nco_2015', top.get('nco_code', '')),
                     "top_k": top_k,
@@ -449,41 +400,41 @@ def search_jobs():
             except Exception:
                 pass
 
-            # Generate contextual suggestion examples
-            suggestion = None
-            if len(results) >= 2:
-                top_score = results[0].get('final_score', 0)
-                next_score = results[1].get('final_score', 0)
-                q_lower = translated_query.lower()
-                # Check if query directly mentions a job title from top results
-                top_title = results[0].get('occupation_title', '').lower()
-                is_direct_job_mention = any(word in top_title for word in q_lower.split()) if top_title else False
-                
-                # Skip suggestions if query directly mentions a job title
-                if not is_direct_job_mention:
-                    # For any ambiguous or low-confidence query, use dynamic prompt generation
-                    if (top_score < 0.6 and abs(top_score - next_score) < 0.05) or top_score < 0.5:
-                        occupation_title = results[0].get('occupation_title', 'professional')
-                        prompts = generate_dynamic_prompts(occupation_title)
-                        suggestion = "Try searching like this:<br>" + "<br>".join([f"&bull; \"{prompt}\"" for prompt in prompts])
             return jsonify({
-                "results": results, 
-                "suggestion": suggestion, 
+                "results": results,
                 "translation_notice": translation_notice,
                 "language_ambiguity": language_ambiguity,
                 "pigs": pigs_output,
                 "top_k": top_k,
-                "returned_count": len(results)
+                "returned_count": len(results),
+                "spelling_correction": spelling_correction
             })
         else:
             # Use the get_all_jobs function for empty queries
-            _, rows = _load_csv_rows()
-            results = [_build_result_from_row(row, idx) for idx, row in enumerate(rows)]
+            results = search_module.get_all_jobs(filters=filters) if search_module else []
             return jsonify({
                 "results": results,
                 "directory_mode": True,
-                "returned_count": len(results)
+                "returned_count": len(results),
+                "spelling_correction": None
             })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/suggest', methods=['GET', 'POST'])
+def suggest_completions():
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        query = data.get('query', '').strip()
+    else:
+        query = request.args.get('query', '').strip()
+        
+    if not query or len(query) < 2:
+        return jsonify({"suggestions": []})
+        
+    try:
+        suggestions = db_store.get_spelling_suggestions(query, limit=10)
+        return jsonify({"suggestions": suggestions})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -532,7 +483,7 @@ def get_prompt_history():
             limit = int(request.args.get('limit', '100'))
         except ValueError:
             limit = 100
-        limit = max(1, min(limit, 500))
+        limit = max(1, min(limit, 5000))
 
         history = db_store.read_prompt_history(limit=limit, occupation_title=occupation_title)
         return jsonify(history)
@@ -857,7 +808,14 @@ def analytics_languages():
         language_counts = {}
         
         for entry in history:
-            lang = entry.get("detected_language", "Unknown")
+            lang = entry.get("detected_language")
+            if not lang:
+                if entry.get("was_translated"):
+                    lang = "Tamil"
+                else:
+                    lang = "English"
+            if lang in ["en", "English"]:
+                lang = "English"
             language_counts[lang] = language_counts.get(lang, 0) + 1
         
         return jsonify({
@@ -908,5 +866,6 @@ def analytics_low_confidence():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# Touch to compile frontend assets after unifying active info paragraph
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

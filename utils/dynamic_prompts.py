@@ -291,6 +291,181 @@ def generate_dynamic_prompts(occupation_title):
     
     return prompts
 
+# ── P.I.G.S. v3 — Query Specificity + Result Diversity ──────────────────────────
+
+# Stop words for specificity scoring
+_PIGS_STOP_WORDS = {
+    'i','me','my','we','us','you','he','she','it','they',
+    'am','is','are','was','were','be','been','being',
+    'have','has','had','do','does','did','will','would',
+    'shall','should','can','could','may','might','must',
+    'a','an','the','and','but','or','nor','so','yet',
+    'of','at','by','for','with','about','to','from',
+    'in','on','up','out','over','into','that','this',
+    'who','what','where','when','how','which','as','if',
+    'then','than','no','not','also','just','very','too',
+    'own','same','such','both','each','some','any','all',
+    'type','kind','sort','related','person','people',
+    'one','two','three','make','made','get','got',
+}
+
+# Action verbs that signal a focused occupational description
+_ACTION_VERBS = {
+    'repair','repairs','fix','fixes','maintain','maintains','service','services','restore','restores',
+    'teach','teaches','train','trains','educate','educates','instruct','instructs','tutor','tutors',
+    'build','builds','construct','constructs','design','designs','create','creates',
+    'develop','develops','install','installs','manufacture','manufactures','assemble','assembles',
+    'manage','manages','supervise','supervises','lead','leads','direct','directs',
+    'coordinate','coordinates','oversee','oversees','administer','administers',
+    'drive','drives','operate','operates','pilot','pilots','run','runs','control','controls',
+    'treat','treats','diagnose','diagnoses','prescribe','prescribes','nurse','nurses','care','cares',
+    'sell','sells','market','markets','promote','promotes','advise','advises',
+    'research','researches','analyze','analyzes','analyse','analyses',
+    'study','studies','investigate','investigates','test','tests','inspect','inspects',
+    'cook','cooks','prepare','prepares','bake','bakes',
+    'guard','guards','protect','protects','secure','secures','monitor','monitors',
+    'audit','audits','review','reviews','survey','surveys',
+    'farm','farms','grow','grows','harvest','harvests','cultivate','cultivates',
+    'write','writes','translate','translates','draft','drafts','edit','edits',
+    'program','programs','code','codes','debug','debugs',
+    'plan','plans','schedule','schedules','organize','organizes',
+}
+
+# Broad single-word concepts that are never occupation-specific
+_BROAD_SINGLE_CONCEPTS = {
+    'star','stars','space','water','fire','earth','air','light','energy','power',
+    'science','nature','environment','climate','weather','sun','moon','planet',
+    'machine','machines','computer','computers','software','hardware','internet',
+    'data','information','network','system','systems','technology','digital',
+    'car','cars','vehicle','vehicles','engine','engines','robot','robots',
+    'food','foods','plant','plants','animal','animals','fish','bird','birds',
+    'hospital','hospitals','school','schools','bank','banks','office','offices',
+    'government','military','police','court','law','legal',
+    'money','finance','economy','market','business','trade','commerce',
+    'art','music','film','media','sport','sports','game','games',
+    'oil','gas','mine','mining','chemical','chemicals','metal','metals',
+    'work','field','industry','sector','area','department',
+    'service','services','support','management','administration',
+    'help','hire','need','find','search','looking',
+}
+
+def _score_query_specificity(query):
+    """
+    Returns a specificity score 0.0–1.0 based on pure content analysis.
+    """
+    words = re.sub(r"[^a-z0-9\s]", "", query.lower()).split()
+    meaningful = [w for w in words if w not in _PIGS_STOP_WORDS and len(w) > 2]
+
+    score = 0.0
+
+    if len(meaningful) >= 4:
+        score += 0.50
+    elif len(meaningful) >= 3:
+        score += 0.32
+    elif len(meaningful) >= 2:
+        score += 0.18
+
+    if any(w in _ACTION_VERBS for w in words):
+        score += 0.30
+
+    if len(meaningful) <= 1 and meaningful and meaningful[0] in _BROAD_SINGLE_CONCEPTS:
+        score -= 0.20
+
+    return max(0.0, min(score, 1.0))
+
+def _compute_result_diversity(top_results):
+    """
+    Returns diversity score 0.0–1.0 based on NCO division spread.
+    """
+    divisions = []
+    for r in top_results[:5]:
+        d = r.get("details", {}) or {}
+        div = str(d.get("division", "")).strip()
+        if div:
+            divisions.append(div)
+
+    if not divisions:
+        return 0.5
+
+    unique_divs = len(set(divisions))
+    total = len(divisions)
+    return min(unique_divs / max(total, 1), 1.0)
+
+def _build_dynamic_suggestions(top_results):
+    """
+    Generates diverse, human-readable occupation title suggestions.
+    """
+    suggestions = []
+    seen_groups = set()
+    for r in top_results[:6]:
+        d = r.get("details", {}) or {}
+        group = str(d.get("group", "")).strip()
+        title = str(r.get("occupation_title", "")).strip()
+        if not title:
+            continue
+        if group and group not in seen_groups:
+            suggestions.append(title)
+            seen_groups.add(group)
+        elif not group and title not in suggestions:
+            suggestions.append(title)
+        if len(suggestions) >= 4:
+            break
+
+    if not suggestions:
+        suggestions = [
+            r.get("occupation_title", "")
+            for r in top_results[:4]
+            if r.get("occupation_title")
+        ]
+
+    return suggestions[:4]
+
+def pigs_v2_analyze(query, top_results):
+    """
+    PIGS v3 — Query Specificity + Result Diversity.
+    """
+    query = (query or "").strip()
+    if not query or not top_results:
+        return None
+
+    specificity = _score_query_specificity(query)
+    diversity   = _compute_result_diversity(top_results)
+    word_count  = len(query.split())
+
+    if specificity >= 0.45:
+        return None
+
+    suggestions = _build_dynamic_suggestions(top_results)
+
+    root = query.lower().strip()
+    is_broad = (word_count == 1 and root in _BROAD_SINGLE_CONCEPTS)
+
+    if not is_broad and specificity >= 0.15 and diversity <= 0.40:
+        return {
+            "state": "FOCUSED",
+            "examples": suggestions
+        }
+
+    if is_broad or diversity >= 0.55 or specificity < 0.15:
+        return {
+            "state": "NEEDS_GUIDANCE",
+            "tip": "Your search could match many different occupations.",
+            "sub_tip": "Try describing what the person does, where they work, or the type of work.",
+            "examples": suggestions
+        }
+
+    return {
+        "state": "FOCUSED",
+        "examples": suggestions
+    }
+
+def pigs_analyze_prompt(query, top_results):
+    """Legacy alias — delegates to pigs_v2_analyze."""
+    result = pigs_v2_analyze(query, top_results)
+    if result is None:
+        return {}, []
+    return {}, []
+
 # Test the system with some examples
 if __name__ == "__main__":
     test_occupations = [

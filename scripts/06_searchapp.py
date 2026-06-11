@@ -90,10 +90,30 @@ def compute_graph_score(query, occupation_code):
     return len(overlap) / len(keywords)
 
 # ------------------ HELPER FUNCTIONS ------------------
-def get_all_jobs():
+def _matches_filter(filter_val, row_val):
+    if not filter_val:
+        return True
+    if isinstance(filter_val, (list, tuple, set)):
+        normalized_filter = {str(v).strip().lower() for v in filter_val if v}
+        if not normalized_filter:
+            return True
+        return str(row_val).strip().lower() in normalized_filter
+    return str(filter_val).strip().lower() == str(row_val).strip().lower()
+
+def get_all_jobs(filters=None):
     all_jobs = []
     _, rows = db_store.load_csv_rows()
     for row in rows:
+        if filters:
+            if not _matches_filter(filters.get("division"), row.get("Division")):
+                continue
+            if not _matches_filter(filters.get("sub_division"), row.get("Sub Division")):
+                continue
+            if not _matches_filter(filters.get("group"), row.get("Group")):
+                continue
+            if not _matches_filter(filters.get("family"), row.get("Family")):
+                continue
+
         all_jobs.append({
             "occupation_title": row["Occupational Title"],
             "nco_code": row["NCO 2015"],
@@ -146,19 +166,74 @@ def reload_from_db():
         }
 
 # ------------------ SEARCH FUNCTION ------------------
-def search(query, top_k=DEFAULT_TOP_K):
+def search(query, top_k=DEFAULT_TOP_K, filters=None):
+    import difflib
     try:
         top_k = int(top_k)
     except (TypeError, ValueError):
         top_k = DEFAULT_TOP_K
     top_k = max(1, min(top_k, MAX_TOP_K))
+    
+    has_filters = filters and any(filters.values())
+    clean_query = query.strip().lower()
+    
+    # Step 1: Substring title matches
+    title_results = []
+    if clean_query:
+        for idx, item in enumerate(metadata):
+            title = item.get("occupation_title", "")
+            if clean_query in title.lower():
+                occ_code = item["nco_2015"]
+                details = job_details.get(occ_code, {})
+                
+                if has_filters:
+                    if not _matches_filter(filters.get("division"), details.get("division")):
+                        continue
+                    if not _matches_filter(filters.get("sub_division"), details.get("sub_division")):
+                        continue
+                    if not _matches_filter(filters.get("group"), details.get("group")):
+                        continue
+                    if not _matches_filter(filters.get("family"), details.get("family")):
+                        continue
+                
+                gn_score = compute_graph_score(query, occ_code)
+                ratio = difflib.SequenceMatcher(None, clean_query, title.lower()).ratio()
+                match_ratio = 0.7 + 0.3 * ratio
+                
+                title_results.append({
+                    "occupation_title": title,
+                    "row_id": item.get("row_id", idx),
+                    "nco_code": occ_code,
+                    "semantic_score": float(match_ratio),
+                    "title_score": float(match_ratio),
+                    "gn_score": float(gn_score),
+                    "final_score": float(match_ratio),
+                    "details": details
+                })
+        
+        # Sort title results: exact matches first, then starts with, then substring
+        def _rank_title_match(x):
+            t_lower = x["occupation_title"].lower()
+            if t_lower == clean_query:
+                return 0
+            elif t_lower.startswith(clean_query):
+                return 1
+            return 2
+            
+        title_results = sorted(title_results, key=_rank_title_match)
+
+    if len(title_results) >= top_k:
+        return title_results[:top_k]
+
+    # Step 2: Semantic search to fill the rest
     candidate_k = max(CANDIDATE_K, top_k)
     title_candidate_k = max(TITLE_CANDIDATE_K, top_k)
+    
+    if has_filters:
+        candidate_k = max(1000, top_k * 10)
+        title_candidate_k = max(1000, top_k * 10)
 
     query_vec = embed_query(query)
-    # Step 1: Search both full occupation documents and occupation titles.
-    # Short user queries often match titles better, while longer prompts benefit
-    # from the full document index.
     scores, indices = index.search(query_vec, candidate_k)
     title_scores, title_indices = title_index.search(query_vec, title_candidate_k)
 
@@ -185,14 +260,22 @@ def search(query, top_k=DEFAULT_TOP_K):
         semantic_score = score_data["semantic_score"]
         title_score = score_data["title_score"]
         occ_code = metadata[idx]["nco_2015"]
-        gn_score = compute_graph_score(query, occ_code)
         details = job_details.get(occ_code, {})
+        
+        if has_filters:
+            if not _matches_filter(filters.get("division"), details.get("division")):
+                continue
+            if not _matches_filter(filters.get("sub_division"), details.get("sub_division")):
+                continue
+            if not _matches_filter(filters.get("group"), details.get("group")):
+                continue
+            if not _matches_filter(filters.get("family"), details.get("family")):
+                continue
+                
+        gn_score = compute_graph_score(query, occ_code)
         base_score = ALPHA * float(semantic_score) + BETA * gn_score
-
-        # Use true raw scores without artificial inflation
         semantic_final = base_score
         title_final = float(title_score)
-        
         final_score = min(max(semantic_final, title_final), 1.0)
         
         candidates.append({
@@ -206,13 +289,21 @@ def search(query, top_k=DEFAULT_TOP_K):
             "details": details
         })
 
-    # Step 2: Re-rank by final_score
+    # Re-rank semantic candidates
     candidates = sorted(candidates, key=lambda x: x["final_score"], reverse=True)
 
-    # Step 3: Filter top-K
-    top_results = candidates[:top_k]
+    # Merge & Remove duplicates (by nco_code)
+    seen = {item["nco_code"] for item in title_results}
+    final_results = list(title_results)
 
-    return top_results
+    for item in candidates:
+        if item["nco_code"] not in seen:
+            final_results.append(item)
+            seen.add(item["nco_code"])
+        if len(final_results) >= top_k:
+            break
+
+    return final_results
 
 def display_results(query, top_results):
     # Step 4: Confidence check
@@ -266,90 +357,6 @@ def display_results(query, top_results):
     else:
         print("\nYour prompt is sufficiently specific across hierarchy levels.")
 
-# P.I.G.S. - Prompt Intelligence Guidance System
-
-# ------------------ PIGS HELPER FUNCTIONS ------------------
-
-def compute_level_similarity(query, descriptions):
-    """
-    Computes average semantic similarity between query and a list of descriptions
-    """
-    if not descriptions:
-        return 0.0
-    
-    query_with_instruction = "Represent this sentence for searching relevant passages: " + query
-    query_vec = model.encode([query_with_instruction], normalize_embeddings=True)
-    desc_vecs = model.encode(descriptions, normalize_embeddings=True)
-    
-    sims = np.dot(desc_vecs, query_vec.T)
-    return float(np.mean(sims))
-
-
-def extract_hierarchy_descriptions(top_results):
-    levels = {
-        "division": set(),
-        "sub_division": set(),
-        "group": set(),
-        "family": set()
-    }
-    
-    for r in top_results:
-        d = r["details"]
-        if not d:
-            continue
-        
-        if d.get("division"):
-            levels["division"].add(d["division"])
-        if d.get("sub_division"):
-            levels["sub_division"].add(d["sub_division"])
-        if d.get("group"):
-            levels["group"].add(d["group"])
-        if d.get("family"):
-            levels["family"].add(d["family"])
-    
-    return {k: list(v) for k, v in levels.items()}
-
-def clean_display_name(value):
-    text = str(value or "").strip()
-    text = re.sub(r",?\s*others?$", "", text, flags=re.IGNORECASE).strip()
-    return text or str(value or "").strip()
-
-def pigs_analyze_prompt(query, top_results):
-    hierarchy_descs = extract_hierarchy_descriptions(top_results)
-    
-    level_scores = {}
-    suggestions = []
-    
-    for level, descriptions in hierarchy_descs.items():
-        score = compute_level_similarity(query, descriptions)
-        level_scores[level] = score
-
-    if top_results:
-        top = top_results[0]
-        details = top.get("details", {}) or {}
-        title = clean_display_name(top.get("occupation_title"))
-        family = clean_display_name(details.get("family"))
-        group = clean_display_name(details.get("group"))
-        division = clean_display_name(details.get("division"))
-
-        if title:
-            suggestions.append(
-                f"The closest match is {title}. If this is correct, search with that job name or describe its main work."
-            )
-        if family and family.lower() != title.lower():
-            suggestions.append(
-                f"You can add the job family: {family}."
-            )
-        if group:
-            suggestions.append(
-                f"You can add the work area: {group}."
-            )
-        if division:
-            suggestions.append(
-                f"You can add the broad field: {division}."
-            )
-    
-    return level_scores, suggestions
 
 # ------------------ MAIN LOOP ------------------
 if __name__ == "__main__":
@@ -359,3 +366,6 @@ if __name__ == "__main__":
             break
         results = search(query)
         display_results(query, results)
+
+
+

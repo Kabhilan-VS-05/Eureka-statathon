@@ -143,3 +143,28 @@ pip install -r requirements.txt
 
 sudo systemctl restart nco-backend
 ```
+
+---
+
+## Phase 4: Troubleshooting & Server Logs
+
+### Checking the Service Logs
+If the backend is running into issues (such as `502 Bad Gateway` or translations failing), you can check the real-time server logs for errors using `journalctl`.
+```bash
+sudo journalctl -u nco-backend -n 50 --no-pager
+```
+
+### Bhashini Credentials & Deep-Translator Fallback
+The backend uses Bhashini for Indic translations. If credentials are not set in the `.env` file, the Gunicorn logs will show a warning:
+`WARNING:translation_service:Bhashini credentials not set`
+
+The system then attempts to fall back to `deep-translator`. If it's missing, you will see an error. Because Ubuntu enforces PEP 668 for system-wide Python environments, if you are not using a virtual environment (or need to install globally), you must use the `--break-system-packages` flag:
+```bash
+sudo pip3 install deep-translator --break-system-packages
+sudo systemctl restart nco-backend
+```
+
+### Frontend Decoupling
+Note that the `frontend/` directory is no longer auto-generated or used by the system.
+- HTML layout changes should be made to `templates/admin/dashboard.html`.
+- CSS and JS modifications should be made directly to `static/admin_dashboard.css` and `static/admin_dashboard.js`.

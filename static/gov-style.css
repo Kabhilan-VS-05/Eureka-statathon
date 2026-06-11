@@ -246,22 +246,29 @@ main h1 {
   justify-content: center;
   width: 100%;
   max-width: 850px;
+  position: relative; /* Anchor for autocomplete dropdown */
 }
 
 .modern-search-bar {
   display: flex;
   flex-grow: 1;
   align-items: center;
-  background-color: #ffffff; /* White background */
+  background-color: #ffffff;
   border: 1px solid #dfe1e5;
-  border-radius: 30px; /* Pill shape */
+  border-radius: 30px;
   padding: 5px 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s;
+  transition: box-shadow 0.3s, border-color 0.2s;
+  position: relative;
 }
 
 .modern-search-bar:hover {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.modern-search-bar:focus-within {
+  border-color: #003366;
+  box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.12), 0 4px 10px rgba(0,0,0,0.1);
 }
 
 .modern-search-bar input[type="text"],
@@ -276,16 +283,231 @@ main h1 {
   resize: none;
   overflow: hidden;
   line-height: 1.4;
+  position: relative;
+  z-index: 1;
 }
 
 .modern-search-bar input[type="text"]::placeholder,
 .modern-search-bar textarea::placeholder {
-  color: #888;
+  color: #9ca3af;
+  transition: color 0.2s;
 }
 
 .modern-search-bar input[type="text"]:focus,
 .modern-search-bar textarea:focus {
   outline: none;
+}
+
+/* ── Ghost Text Autocomplete ───────────────────────────────────── */
+.search-ghost-wrapper {
+  position: relative;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
+.search-ghost-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  padding: 10px;
+  font-size: 16px;
+  font-family: Arial, sans-serif;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.ghost-typed {
+  color: transparent; /* invisible — just takes up space */
+}
+
+.ghost-suggestion {
+  color: #aab4be;
+  font-style: normal;
+}
+
+/* ── Live Autocomplete Dropdown ────────────────────────────────── */
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #dfe1e5;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 500;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.15s ease;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.autocomplete-dropdown.hidden {
+  display: none;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.autocomplete-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 16px 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #1e293b;
+  transition: background 0.1s;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+  background: #eef4fb;
+  color: #003366;
+}
+
+.autocomplete-item .ac-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #003366;
+}
+
+.autocomplete-item .ac-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.autocomplete-item .ac-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.autocomplete-item .ac-title em {
+  font-style: normal;
+  color: #003366;
+  font-weight: 700;
+}
+
+.autocomplete-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.autocomplete-loading .ac-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #dfe1e5;
+  border-top-color: #003366;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── Example Search Chips ──────────────────────────────────────── */
+.search-chips-row {
+  width: 100%;
+  max-width: 850px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-top: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.search-chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: #ffffff;
+  border: 1px solid #dfe1e5;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.search-chip:hover {
+  background: #eef4fb;
+  border-color: #003366;
+  color: #003366;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0,51,102,0.10);
+}
+
+.search-chip:active {
+  transform: translateY(0);
+}
+
+/* ── Keyboard Hint Bar ─────────────────────────────────────────── */
+.search-kb-hint {
+  width: 100%;
+  max-width: 850px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 7px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  flex-wrap: wrap;
+}
+
+.search-kb-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-family: monospace;
+  color: #475569;
+  margin-right: 2px;
 }
 
 .mic-button,
@@ -577,6 +799,16 @@ main h1 {
 
 .btn-secondary:hover {
   background-color: #5a6268;
+}
+
+/* ── Result Row Entrance Animation ────────────────────────────── */
+@keyframes resultFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.result-row-animate {
+  animation: resultFadeIn 0.25s ease both;
 }
 
 /* Results Table Styles */
@@ -901,7 +1133,7 @@ main h1 {
     width: auto;
   }
 
-  /* Horizontal Scrollable Nav Tabs */
+  /* Horizontal Scrollable Nav Tabs with fade scroll indicator */
   .main-nav {
     background-color: #002244;
     overflow-x: auto;
@@ -912,7 +1144,19 @@ main h1 {
   }
 
   .main-nav::-webkit-scrollbar {
-    display: none; /* Hide horizontal scrollbar track */
+    display: none;
+  }
+
+  /* Right gradient fade to hint more items exist */
+  .main-nav::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 32px;
+    background: linear-gradient(to right, transparent, #002244);
+    pointer-events: none;
   }
 
   .nav-list {
@@ -983,10 +1227,10 @@ main h1 {
     padding: 4px;
   }
 
-  /* Hide placeholder on mobile view */
+  /* Show a short helpful placeholder on mobile */
   #occupationSearch::placeholder {
-    color: transparent !important;
-    opacity: 0 !important;
+    color: #9ca3af;
+    font-size: 13px;
   }
 
   .search-button {
@@ -1409,7 +1653,7 @@ main h1 {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(15, 23, 42, 0.6); /* Modern slate backdrop */
+    background-color: rgba(15, 23, 42, 0.6); /* Slate backdrop */
     backdrop-filter: blur(4px);
     transition: opacity 0.3s ease;
   }
@@ -1432,7 +1676,7 @@ main h1 {
     overflow-y: auto;
     box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.15) !important;
     animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    padding-top: 24px !important; /* Leave room for drag bar */
+    padding-top: 24px !important; /* Drag bar space */
     border: none !important;
   }
 
@@ -1445,7 +1689,7 @@ main h1 {
     }
   }
 
-  /* Bottom sheet visual drag bar */
+  /* visual drag bar */
   .modal-content::before {
     content: "";
     position: absolute;
@@ -1458,10 +1702,10 @@ main h1 {
     border-radius: 99px;
   }
 
-  /* Make header inside bottom sheet sticky */
+  /* sticky modal header */
   .modal-content h2 {
     position: sticky;
-    top: -24px; /* Offset the top padding */
+    top: -24px; /* Offset drag bar padding */
     margin: 0 0 10px 0;
     background-color: #003366 !important;
     color: #ffffff !important;
@@ -1501,12 +1745,39 @@ main h1 {
     font-size: 13.5px;
   }
 
-  /* Hierarchy alignment styles for clean columns */
   .modal-content p strong {
     color: #475569;
     font-weight: 600;
     display: inline-block;
     width: 100px;
   }
-}
 
+  /* Mobile chips */
+  .search-chips-row {
+    margin-top: 8px;
+    gap: 6px;
+  }
+
+  .search-chip {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  /* Keyboard hint */
+  .search-kb-hint {
+    font-size: 10.5px;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  /* Autocomplete */
+  .autocomplete-dropdown {
+    border-radius: 12px;
+    max-height: 240px;
+  }
+
+  .autocomplete-item {
+    padding: 10px 12px;
+    font-size: 13.5px;
+  }
+}

@@ -47,11 +47,9 @@ Dependencies declared in `requirements.txt`:
 - `scripts/03_build_faiss_index.py`: Build FAISS index and store it in PostgreSQL
 - `scripts/04_search.py`: CLI semantic search test utility
 - `scripts/05_searchGN.py`: Build simple graph-network keyword map
-- `scripts/06_searchapp.py`: Runtime hybrid search implementation + PIGS helper
+- `scripts/06_searchapp.py`: Runtime hybrid search implementation
 - `utils/translation_service.py`: language detection + translation chain
-- `utils/dynamic_prompts.py`: dynamic prompt generation based on occupation title/category
-- `utils/analyze_occupations.py`: exploratory analysis utility
-- `utils/debug_search.py`: quick debug search utility
+- `utils/dynamic_prompts.py`: dynamic prompt generation + PIGS v3 (Specificity & Diversity Engine)
 - `data/raw/nco_dataset_v6_final.csv`: previous import source for migration
 - `data/processed/*.json`: previous import source for migration/history
 - `models/*`: legacy local artifacts no longer used by runtime
@@ -315,6 +313,11 @@ As of latest changes in this workspace:
   - required hierarchy validations
   - conditional NCO 2004 edit visibility
 - Existing search APIs and core architecture preserved.
+- Added a 4-level NCO Search Demand Sunburst Chart (Division, Sub-Division, Group, Family) to the admin dashboard.
+- Integrated PIGS v3 (Prompt Intelligence & Guidance System) to use query specificity and result diversity heuristics instead of basic semantic scores.
+- Redesigned search flow to use a "title-first, semantic-fill" strategy with instant debounced rendering (no spinner or artificial delays).
+- Updated Translation Usage chart to show detailed breakdown by detected language (English, Tamil, Hindi, etc.) instead of a binary state.
+- Cleaned up obsolete scratch files and static vocabulary lists.
 
 ---
 

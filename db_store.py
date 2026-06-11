@@ -117,6 +117,15 @@ def init_db():
                 """
             )
 
+    # Try enabling pg_trgm and GIN index in a separate transaction so failures don't abort init_db
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+                cur.execute("CREATE INDEX IF NOT EXISTS ix_occupations_title_trgm ON occupations USING gin (occupation_title gin_trgm_ops);")
+    except Exception as e:
+        print(f"Warning: Failed to initialize PostgreSQL pg_trgm extension or GIN index. Fallback to in-memory matching will be used. Error: {e}")
+
 
 def safe_text(value):
     if value is None:
@@ -514,3 +523,61 @@ def load_embeddings():
     if data is None:
         return None
     return np.load(io.BytesIO(data))
+
+
+# Cached unique occupation titles for difflib fallback
+_cached_titles = []
+
+def get_cached_titles():
+    global _cached_titles
+    if not _cached_titles:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT DISTINCT occupation_title FROM occupations;")
+                    _cached_titles = [r[0] for r in cur.fetchall() if r[0]]
+        except Exception as e:
+            print(f"Failed to load cached titles for difflib: {e}")
+            try:
+                _, rows = load_csv_rows()
+                _cached_titles = list(set(row["Occupational Title"] for row in rows if row.get("Occupational Title")))
+            except Exception:
+                pass
+    return _cached_titles
+
+
+def get_trigram_suggestions(query, limit=10):
+    try:
+        with get_conn() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT occupation_title, similarity(occupation_title, %s) as similarity
+                    FROM occupations
+                    WHERE similarity(occupation_title, %s) > 0.3
+                    ORDER BY similarity DESC, occupation_title ASC
+                    LIMIT %s;
+                    """,
+                    (query, query, limit)
+                )
+                return [row["occupation_title"] for row in cur.fetchall()]
+    except Exception as e:
+        print(f"Trigram suggestion failed: {e}")
+        return None
+
+
+def get_difflib_suggestions(query, limit=10):
+    import difflib
+    titles = get_cached_titles()
+    if not titles:
+        return []
+    return difflib.get_close_matches(query, titles, n=limit, cutoff=0.5)
+
+
+def get_spelling_suggestions(query, limit=10):
+    # Try PostgreSQL trigram first
+    results = get_trigram_suggestions(query, limit)
+    if results is not None:
+        return results
+    # Fallback to difflib
+    return get_difflib_suggestions(query, limit)
