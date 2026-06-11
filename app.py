@@ -146,6 +146,35 @@ def _normalize_nco_code(value):
     return f"{left}.{right}"
 
 
+def _format_nco_2004(value):
+    raw = _safe_text(value)
+    if not raw:
+        return ""
+    raw = raw.replace(" ", "")
+    parts = raw.split(".")
+
+    def _digits(s):
+        return re.sub(r"\D", "", s or "")
+
+    if len(parts) == 1:
+        digits = _digits(parts[0])
+        if len(digits) == 6:
+            return f"{digits[:4]}.{digits[4:6]}"
+        if len(digits) == 4:
+            return f"{digits}.00"
+        if 4 < len(digits) < 6:
+            return f"{digits[:4]}.{digits[4:].ljust(2, '0')[:2]}"
+        if len(digits) > 6:
+            return f"{digits[:4]}.{digits[4:6]}"
+        return raw
+
+    left = _digits(parts[0])
+    right = _digits(parts[1] if len(parts) > 1 else "")
+    left = left[:4].ljust(4, "0")
+    right = right[:2].ljust(2, "0")
+    return f"{left}.{right}"
+
+
 def _parse_nco_2015(value):
     raw = _safe_text(value).replace(" ", "")
     if not raw:
@@ -273,7 +302,7 @@ def _build_result_from_row(row, row_id):
         "gn_score": 0.0,
         "final_score": 1.0,
         "details": {
-            "nco_2004_code": _safe_text(row.get("NCO 2004")),
+            "nco_2004_code": _format_nco_2004(row.get("NCO 2004")),
             "division": _safe_text(row.get("Division")),
             "sub_division": _safe_text(row.get("Sub Division")),
             "group": _safe_text(row.get("Group")),
@@ -368,6 +397,8 @@ def search_jobs():
             for r in results:
                 if "nco_code" in r:
                     r["nco_code"] = _normalize_nco_code(r.get("nco_code"))
+                if "details" in r and "nco_2004" in r["details"]:
+                    r["details"]["nco_2004"] = _format_nco_2004(r["details"]["nco_2004"])
 
             # ------------------ PIGS v2 ANALYSIS ------------------
             pigs_output = None
@@ -499,10 +530,10 @@ def get_occupations():
         for idx, row in enumerate(rows):
             occupations.append({
                 "row_id": int(row.get("_row_id") or idx),
-                "s_no": _safe_text(row.get("S No")),
+                "id": _safe_text(row.get("S No")),
                 "occupation_title": _safe_text(row.get("Occupational Title")),
-                "nco_code": _safe_text(row.get("NCO 2015")),
-                "nco_2004_code": _safe_text(row.get("NCO 2004")),
+                "nco_code": _normalize_nco_code(row.get("NCO 2015")),
+                "nco_2004_code": _format_nco_2004(row.get("NCO 2004")),
                 "division": _safe_text(row.get("Division")),
                 "sub_division": _safe_text(row.get("Sub Division")),
                 "group": _safe_text(row.get("Group")),
