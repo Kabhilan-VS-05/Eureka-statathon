@@ -342,20 +342,7 @@ def display_results(query, top_results):
         print(f"   (Semantic: {r['semantic_score']:.3f} | Graph: {r['gn_score']:.3f})")
         print("="*80 + "\n")
     
-    # ------------------ PIGS OUTPUT ------------------
-    level_scores, suggestions = pigs_analyze_prompt(query, top_results)
 
-    print("\nPrompt Intelligence & Guidance System (PIGS)")
-    print("-" * 60)
-    for level, score in level_scores.items():
-        print(f"{level.replace('_', ' ').title()} Match Score: {score:.3f}")
-
-    if suggestions:
-        print("\nPrompt Refinement Suggestions:")
-        for s in suggestions:
-            print(f" - {s}")
-    else:
-        print("\nYour prompt is sufficiently specific across hierarchy levels.")
 
 
 # ------------------ MAIN LOOP ------------------

@@ -45,9 +45,9 @@ else:
     raise RuntimeError("Failed to load search module")
 
 # Import dynamic prompt generation system and PIGS
-from dynamic_prompts import generate_dynamic_prompts, pigs_v2_analyze, pigs_analyze_prompt
+from utils.dynamic_prompts import generate_dynamic_prompts, pigs_v2_analyze, pigs_analyze_prompt
 # Import translation service
-from translation_service import translation_service
+from utils.translation_service import translation_service
 
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing globally
@@ -374,7 +374,8 @@ def search_jobs():
             if pigs_v2_analyze and results:
                 try:
                     pigs_output = pigs_v2_analyze(translated_query, results)
-                except Exception:
+                except Exception as e:
+                    print(f"PIGS analysis error: {e}")
                     pigs_output = None
 
             try:
