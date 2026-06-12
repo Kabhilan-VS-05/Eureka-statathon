@@ -12,7 +12,7 @@ PROJECT_DIR = os.path.dirname(BASE_DIR)
 if PROJECT_DIR not in sys.path:
     sys.path.append(PROJECT_DIR)
 
-import db_store
+from database import db_store
 
 MODEL_NAME = "BAAI/bge-small-en-v1.5"
 DEFAULT_TOP_K = 5
@@ -100,7 +100,14 @@ def _matches_filter(filter_val, row_val):
         return str(row_val).strip().lower() in normalized_filter
     return str(filter_val).strip().lower() == str(row_val).strip().lower()
 
+_all_jobs_cache = None
+
+
 def get_all_jobs(filters=None):
+    global _all_jobs_cache
+    if not filters:
+        if _all_jobs_cache is not None:
+            return _all_jobs_cache
     all_jobs = []
     _, rows = db_store.load_csv_rows()
     for row in rows:
@@ -125,11 +132,14 @@ def get_all_jobs(filters=None):
                 "family": row["Family"],
             }
         })
+    if not filters:
+        _all_jobs_cache = all_jobs
     return all_jobs
 
 
 def reload_from_db():
-    global documents, metadata, gn, index, title_index, job_details
+    global documents, metadata, gn, index, title_index, job_details, _all_jobs_cache
+    _all_jobs_cache = None
 
     print("Reloading search runtime from PostgreSQL...")
     documents, metadata = db_store.load_search_documents()

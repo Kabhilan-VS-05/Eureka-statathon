@@ -24,7 +24,7 @@
 
       body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        background: #f4f6f9;
         color: var(--dark-gray);
         line-height: 1.6;
         min-height: 100vh;
@@ -44,9 +44,9 @@
         background: var(--white);
         border: 1px solid var(--border-gray);
         border-top: 4px solid #0b3d91;
-        border-radius: 12px;
+        border-radius: 4px;
         padding: 18px;
-        box-shadow: var(--shadow-sm);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         height: 380px;
         min-height: 380px;
         max-height: 380px;
@@ -88,8 +88,8 @@
         min-width: 280px;
         background: #ffffff;
         border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
         display: flex;
@@ -429,10 +429,10 @@
 
       /* Professional Header */
       .main-header {
-        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+        background: #0b3d91;
         color: var(--white);
         padding: 1rem 0;
-        box-shadow: var(--shadow-lg);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         position: relative;
         overflow: hidden;
       }
@@ -558,11 +558,11 @@
       }
 
       .stat-box {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background: #ffffff;
         border: 1px solid #dee2e6;
         padding: 30px 20px;
         text-align: center;
-        border-radius: 6px;
+        border-radius: 4px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
@@ -586,13 +586,13 @@
       }
 
       .chart-container {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        background: #ffffff;
         border: 1px solid #dee2e6;
         padding: 25px;
         margin-bottom: 25px;
         height: 450px;
-        border-radius: 6px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
       }
 
       .chart-container .chart-title {
@@ -621,11 +621,11 @@
       }
 
       .search-form {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background: #f8f9fa;
         border: 1px solid #dee2e6;
         padding: 25px;
         margin-bottom: 25px;
-        border-radius: 6px;
+        border-radius: 4px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
       }
 

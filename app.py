@@ -17,7 +17,7 @@ import io
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
 # Add utils directory to path to import prompt system
 sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
-import db_store
+from database import db_store
 db_store.init_db()
 
 # Auto-arrange dataset file if present in the root folder
@@ -36,23 +36,33 @@ if os.path.exists(_root_csv):
 
 
 # Load search module once at startup for performance
-import importlib.util
-spec = importlib.util.spec_from_file_location("searchapp", os.path.join(os.path.dirname(__file__), 'scripts', '06_searchapp.py'))
-if spec and spec.loader:
-    search_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(search_module)
-else:
-    raise RuntimeError("Failed to load search module")
+import utils.searchapp as search_module
 
 # Import dynamic prompt generation system and PIGS
 from utils.dynamic_prompts import generate_dynamic_prompts, pigs_v2_analyze, pigs_analyze_prompt
 # Import translation service
 from utils.translation_service import translation_service
+# Import IP geolocation utility
+from utils.ip_location import resolve_ip_location
 
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing globally
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'nco_dataset_v6_final.csv')
+ASSET_VERSION = os.getenv("ASSET_VERSION", "7")
+STATIC_CACHE_SECONDS = int(os.getenv("STATIC_CACHE_SECONDS", "86400"))
+
+
+@app.context_processor
+def inject_asset_version():
+    return {"asset_version": ASSET_VERSION}
+
+
+@app.after_request
+def add_performance_headers(response):
+    if request.path.startswith("/static/"):
+        response.headers["Cache-Control"] = f"public, max-age={STATIC_CACHE_SECONDS}"
+    return response
 
 
 def _get_admin_setting(key):
@@ -417,6 +427,13 @@ def search_jobs():
                     detected_lang = supported_langs.get(lang_code, "Other")
 
                 top = results[0] if results else {}
+                top_details = top.get("details") or {}
+                client_ip = request.remote_addr
+                geo = {}
+                try:
+                    geo = resolve_ip_location(client_ip)
+                except Exception:
+                    pass
                 _append_prompt_history_entry({
                     "ts": datetime.now(timezone.utc).isoformat(),
                     "query": query,
@@ -425,9 +442,16 @@ def search_jobs():
                     "detected_language": detected_lang,
                     "occupation_title": top.get('occupation_title', ''),
                     "nco_code": top.get('nco_2015', top.get('nco_code', '')),
+                    "division": top_details.get("division", ""),
+                    "sub_division": top_details.get("sub_division", ""),
+                    "group": top_details.get("group", ""),
+                    "family": top_details.get("family", ""),
                     "top_k": top_k,
                     "returned_count": len(results),
-                    "client_ip": request.remote_addr
+                    "client_ip": client_ip,
+                    "geo_city": geo.get("city", ""),
+                    "geo_state": geo.get("state", ""),
+                    "geo_country": geo.get("country", ""),
                 })
             except Exception:
                 pass
@@ -898,6 +922,26 @@ def analytics_low_confidence():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# Touch to compile frontend assets after unifying active info paragraph
+
+@app.route('/admin/api/analytics/states')
+def analytics_states():
+    """Return aggregated search counts per Indian state for the India map."""
+    try:
+        stats = db_store.get_state_search_stats()
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/admin/api/analytics/states/<state_name>')
+def analytics_state_detail(state_name):
+    """Return top occupations and division breakdown for a specific state."""
+    try:
+        stats = db_store.get_state_occupation_stats(state_name)
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    debug_mode = os.getenv("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")
+    app.run(debug=debug_mode, port=int(os.getenv("PORT", "5000")), threaded=True)

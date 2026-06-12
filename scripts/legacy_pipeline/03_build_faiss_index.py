@@ -7,7 +7,7 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_DIR not in sys.path:
     sys.path.append(PROJECT_DIR)
 
-import db_store
+from database import db_store
 
 
 if __name__ == "__main__":

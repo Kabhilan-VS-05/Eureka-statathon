@@ -120,6 +120,13 @@ For your new code to take effect (especially Python backend code changes in `app
 sudo systemctl restart nco-backend
 ```
 
+**Recommended production command (inside `venv`):**
+```bash
+gunicorn -c gunicorn.conf.py wsgi:app
+```
+
+Set `ASSET_VERSION=2` (or higher) in `.env` after frontend/CSS/JS updates so browsers fetch fresh static files.
+
 ---
 
 ## Summary: Your Future 2-Step Update Routine

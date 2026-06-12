@@ -8,12 +8,24 @@ from datetime import datetime, timezone
 import numpy as np
 import psycopg2
 import psycopg2.extras
+from psycopg2 import pool
 
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:postgres@localhost:5432/statathon_nco",
 )
+
+_DB_POOL = None
+_DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "1"))
+_DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "8"))
+
+
+def _get_pool():
+    global _DB_POOL
+    if _DB_POOL is None:
+        _DB_POOL = pool.ThreadedConnectionPool(_DB_POOL_MIN, _DB_POOL_MAX, DATABASE_URL)
+    return _DB_POOL
 
 OCCUPATION_FIELDS = [
     "S No",
@@ -34,7 +46,7 @@ OCCUPATION_FIELDS = [
 
 @contextmanager
 def get_conn():
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = _get_pool().getconn()
     try:
         yield conn
         conn.commit()
@@ -42,7 +54,7 @@ def get_conn():
         conn.rollback()
         raise
     finally:
-        conn.close()
+        _get_pool().putconn(conn)
 
 
 def init_db():
@@ -116,6 +128,17 @@ def init_db():
                 );
                 """
             )
+
+    # Add geo columns to prompt_history if they don't exist yet (safe for existing databases)
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("ALTER TABLE prompt_history ADD COLUMN IF NOT EXISTS geo_city TEXT DEFAULT '';")
+                cur.execute("ALTER TABLE prompt_history ADD COLUMN IF NOT EXISTS geo_state TEXT DEFAULT '';")
+                cur.execute("ALTER TABLE prompt_history ADD COLUMN IF NOT EXISTS geo_country TEXT DEFAULT '';")
+                cur.execute("CREATE INDEX IF NOT EXISTS ix_prompt_history_geo_state ON prompt_history (geo_state);")
+    except Exception as e:
+        print(f"Warning: Failed to add geo columns to prompt_history: {e}")
 
     # Try enabling pg_trgm and GIN index in a separate transaction so failures don't abort init_db
     try:
@@ -359,9 +382,10 @@ def append_prompt_history(entry):
                 """
                 INSERT INTO prompt_history (
                     ts, query, translated_query, was_translated, occupation_title,
-                    nco_code, top_k, returned_count, client_ip, raw
+                    nco_code, top_k, returned_count, client_ip,
+                    geo_city, geo_state, geo_country, raw
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     ts,
@@ -373,6 +397,9 @@ def append_prompt_history(entry):
                     raw.get("top_k"),
                     raw.get("returned_count"),
                     safe_text(raw.get("client_ip")),
+                    safe_text(raw.get("geo_city")),
+                    safe_text(raw.get("geo_state")),
+                    safe_text(raw.get("geo_country")),
                     psycopg2.extras.Json(raw),
                 ),
             )
@@ -412,6 +439,9 @@ def read_prompt_history(limit=5000, occupation_title=""):
                     "top_k": row["top_k"],
                     "returned_count": row["returned_count"],
                     "client_ip": row["client_ip"],
+                    "geo_city": row.get("geo_city", ""),
+                    "geo_state": row.get("geo_state", ""),
+                    "geo_country": row.get("geo_country", ""),
                 })
                 history.append(raw)
             return history
@@ -581,3 +611,80 @@ def get_spelling_suggestions(query, limit=10):
         return results
     # Fallback to difflib
     return get_difflib_suggestions(query, limit)
+
+
+def get_state_search_stats():
+    """Return aggregated search counts per Indian state."""
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT geo_state, COUNT(*) AS search_count
+                FROM prompt_history
+                WHERE geo_state IS NOT NULL AND geo_state <> ''
+                GROUP BY geo_state
+                ORDER BY search_count DESC
+                """
+            )
+            return [{"state": row["geo_state"], "count": row["search_count"]} for row in cur.fetchall()]
+
+
+def get_state_occupation_stats(state_name):
+    """Return top occupations and division breakdown for a given state."""
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # Total searches for this state
+            cur.execute(
+                "SELECT COUNT(*) AS total FROM prompt_history WHERE geo_state = %s",
+                (state_name,)
+            )
+            total_row = cur.fetchone()
+            total = int(total_row["total"]) if total_row else 0
+
+            # Top 10 occupations
+            cur.execute(
+                """
+                SELECT occupation_title, COUNT(*) AS cnt
+                FROM prompt_history
+                WHERE geo_state = %s AND occupation_title IS NOT NULL AND occupation_title <> ''
+                GROUP BY occupation_title
+                ORDER BY cnt DESC
+                LIMIT 10
+                """,
+                (state_name,)
+            )
+            occupations = []
+            for row in cur.fetchall():
+                cnt = int(row["cnt"])
+                pct = round(cnt / total * 100, 1) if total else 0
+                occupations.append({
+                    "title": row["occupation_title"],
+                    "count": cnt,
+                    "percentage": pct
+                })
+
+            # Division breakdown — join with occupations table to get division
+            cur.execute(
+                """
+                SELECT o.division, COUNT(*) AS cnt
+                FROM prompt_history ph
+                LEFT JOIN occupations o ON ph.occupation_title = o.occupation_title
+                WHERE ph.geo_state = %s
+                  AND o.division IS NOT NULL AND o.division <> ''
+                GROUP BY o.division
+                ORDER BY cnt DESC
+                LIMIT 10
+                """,
+                (state_name,)
+            )
+            divisions = [{
+                "division": row["division"],
+                "count": int(row["cnt"])
+            } for row in cur.fetchall()]
+
+            return {
+                "state": state_name,
+                "total": total,
+                "occupations": occupations,
+                "divisions": divisions
+            }

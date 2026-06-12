@@ -2,6 +2,9 @@
       window.charts = {};
       let refreshInterval;
       window.analyticsLoading = false;
+      const ANALYTICS_REFRESH_MS = 90000;
+      const ANALYTICS_HISTORY_LIMIT = 500;
+      let occupationsLoadPromise = null;
 
       // Global variables
       let occupations = [];
@@ -35,6 +38,7 @@
       });
 
       // Initialize dashboard on page load
+      let dashboardInitialized = false;
       document.addEventListener("DOMContentLoaded", function () {
         console.log("DEBUG: DOMContentLoaded event fired");
         initializeDashboard();
@@ -46,18 +50,16 @@
       }
 
       function initializeDashboard() {
-        console.log("DEBUG: initializeDashboard called");
+        if (dashboardInitialized) return;
+        dashboardInitialized = true;
+        
         initializeCharts();
-        console.log("DEBUG: Charts initialized");
-        loadOccupations();
-        console.log("DEBUG: loadOccupations called");
         loadAnalyticsData();
-        console.log("DEBUG: loadAnalyticsData called");
         updateLastUpdateTime();
-        setInterval(updateLastUpdateTime, 1000);
-        console.log("DEBUG: updateLastUpdateTime ticking in real time");
-
         startAnalyticsAutoRefresh();
+        
+        // Silently load occupations in the background so NCO charts get their division data
+        ensureOccupationsLoaded().catch(e => console.warn("Background occupations load failed:", e));
       }
 
       function startAnalyticsAutoRefresh() {
@@ -67,6 +69,10 @@
         }
 
         refreshInterval = setInterval(() => {
+          if (document.hidden) {
+            console.log("DEBUG: Tab is hidden, skipping auto-refresh");
+            return;
+          }
           const analyticsTab = document.getElementById('analytics-tab');
           const ncoTab = document.getElementById('nco-analysis-tab');
           if (analyticsTab?.classList.contains('active')) {
@@ -74,7 +80,7 @@
           } else if (ncoTab?.classList.contains('active')) {
             loadNcoAnalysisData();
           }
-        }, 30000);
+        }, ANALYTICS_REFRESH_MS);
       }
 
       // Loading functions
@@ -87,75 +93,62 @@
       }
 
       // Data loading functions
-      function loadOccupations() {
-        showLoading();
-        console.log("DEBUG: Starting to load occupations...");
-        
-        // Update visible test
-        const jsStatus = document.getElementById("jsStatus");
-        if (jsStatus) {
-          jsStatus.textContent = "LOADING DATA...";
-          jsStatus.style.color = "orange";
+      function ensureOccupationsLoaded() {
+        if (occupations.length > 0) {
+          return Promise.resolve(occupations);
         }
-        
-        fetch("/admin/api/occupations")
-          .then((response) => {
-            console.log("DEBUG: Response received:", response.status);
-            return response.json();
-          })
+        if (occupationsLoadPromise) {
+          return occupationsLoadPromise;
+        }
+        occupationsLoadPromise = loadOccupations({ silent: true });
+        return occupationsLoadPromise;
+      }
+
+      function loadOccupations(options = {}) {
+        const silent = Boolean(options.silent);
+        if (!silent) {
+          showLoading();
+        }
+
+        const promise = fetch("/admin/api/occupations")
+          .then((response) => response.json())
           .then((data) => {
-            console.log("DEBUG: Data received:", data.length, "records");
             occupations = Array.isArray(data) ? data : [];
             filteredOccupations = [...occupations];
-            console.log("DEBUG: occupations array set to:", occupations.length);
-            console.log("DEBUG: filteredOccupations array set to:", filteredOccupations.length);
-            
-            // Update visible test with success
-            const jsStatus = document.getElementById("jsStatus");
-            if (jsStatus) {
-              jsStatus.textContent = `DATA LOADED: ${occupations.length} records`;
-              jsStatus.style.color = "green";
+            _ncoLookupMap = null; // invalidate lookup cache so it rebuilds with fresh data
+
+            if (!silent) {
+              updateStatistics();
+              updateFilters();
+              displayTable();
+            } else {
+              updateFilters();
             }
-            
-            updateStatistics();
-            console.log("DEBUG: Statistics updated");
-            updateFilters();
-            console.log("DEBUG: Filters updated");
-            displayTable();
-            console.log("DEBUG: Table displayed");
-            updateChartsData();
-            console.log("DEBUG: Charts updated");
+
             if (allAnalyticsHistory.length) {
               updateSearchAnalyticsCharts(allAnalyticsHistory);
             }
-            if (document.getElementById('nco-analysis-tab') && document.getElementById('nco-analysis-tab').classList.contains('active')) {
-              refreshNcoFilterOptions();
-              updateNcoAnalysisMetrics();
-              drawNcoBubbleChart();
-            }
+            return occupations;
           })
           .catch((error) => {
             console.error("Error loading occupations:", error);
-            
-            // Update visible test with error
-            const jsStatus = document.getElementById("jsStatus");
-            if (jsStatus) {
-              jsStatus.textContent = `ERROR: ${error.message}`;
-              jsStatus.style.color = "red";
+            if (!silent) {
+              showNotification("Failed to load occupations data", "error");
             }
-            
-            showNotification("Failed to load occupations data", "error");
+            throw error;
           })
           .finally(() => {
-            hideLoading();
+            if (!silent) {
+              hideLoading();
+            }
           });
+
+        occupationsLoadPromise = promise;
+        return promise;
       }
 
       function loadNcoAnalysisData() {
-        if (occupations.length === 0) {
-          loadOccupations();
-        }
-        loadAnalyticsData();
+        initIndiaMap();
       }
 
       function updateStatistics() {
@@ -209,6 +202,9 @@
       
       // Chart initialization - Create all 6 Chart.js instances
       function initializeCharts() {
+        if (typeof Chart !== "undefined") {
+          Chart.defaults.animation = false;
+        }
         console.log("DEBUG: initializeCharts called");
         
         // 1. Search Volume Trend Chart
@@ -400,6 +396,35 @@
         return;
       }
 
+      // Cache for nco_code → occupation lookup (built once, reused on every chart update)
+      let _ncoLookupMap = null;
+
+      function _buildNcoLookup() {
+        if (_ncoLookupMap) return _ncoLookupMap;
+        _ncoLookupMap = new Map();
+        (occupations || []).forEach(occ => {
+          if (occ.nco_code) _ncoLookupMap.set(String(occ.nco_code).trim(), occ);
+        });
+        return _ncoLookupMap;
+      }
+
+      /**
+       * Looks up a hierarchy property (division / sub_division / group / family)
+       * for a prompt_history entry using its nco_code.
+       */
+      function getAnalyticsEntryProperty(entry, field) {
+        if (!entry) return null;
+        // Direct field on entry (e.g. already enriched)
+        if (entry[field]) return entry[field];
+        // Look up via nco_code
+        const code = entry.nco_code || entry.nco2015_code || '';
+        if (!code) return null;
+        const lookup = _buildNcoLookup();
+        const occ = lookup.get(String(code).trim());
+        return occ ? (occ[field] || null) : null;
+      }
+
+
       function updateSearchAnalyticsCharts(historyData) {
         if (!Array.isArray(historyData)) {
           console.warn("Invalid history data");
@@ -469,7 +494,7 @@
         if (charts.searchVolumeTrendChart) {
           charts.searchVolumeTrendChart.data.labels = trendEntries.map(([label]) => label);
           charts.searchVolumeTrendChart.data.datasets[0].data = trendEntries.map(([, count]) => count);
-          charts.searchVolumeTrendChart.update();
+          charts.searchVolumeTrendChart.update("none");
         }
         setTextContent("searchVolumeTrendTitle", `Search Volume Trend by ${capitalize(groupBy)}`);
 
@@ -479,7 +504,7 @@
         if (charts.topSearchesChart) {
           charts.topSearchesChart.data.labels = topSearches.map(([query]) => truncateLabel(query, 35));
           charts.topSearchesChart.data.datasets[0].data = topSearches.map(([, count]) => count);
-          charts.topSearchesChart.update();
+          charts.topSearchesChart.update("none");
         }
         setTextContent("topSearchesTitle", `Top ${topN} Search Queries`);
 
@@ -525,7 +550,7 @@
           charts.languageDistributionChart.data.labels = labels;
           charts.languageDistributionChart.data.datasets[0].data = data;
           charts.languageDistributionChart.data.datasets[0].backgroundColor = bgColors;
-          charts.languageDistributionChart.update();
+          charts.languageDistributionChart.update("none");
         }
 
         // ===== CHART 5: Top Matched Occupations =====
@@ -534,7 +559,7 @@
         if (charts.topOccupationsChart) {
           charts.topOccupationsChart.data.labels = topOccupations.map(([title]) => truncateLabel(title, 35));
           charts.topOccupationsChart.data.datasets[0].data = topOccupations.map(([, count]) => count);
-          charts.topOccupationsChart.update();
+          charts.topOccupationsChart.update("none");
         }
         setTextContent("topOccupationsTitle", `Top ${topN} Matched Occupations`);
 
@@ -544,11 +569,46 @@
         if (charts.confidenceTrendChart) {
           charts.confidenceTrendChart.data.labels = topDivisions.map(([division]) => truncateLabel(division, 35));
           charts.confidenceTrendChart.data.datasets[0].data = topDivisions.map(([, count]) => count);
-          charts.confidenceTrendChart.update();
+          charts.confidenceTrendChart.update("none");
         }
 
         // Update last update time
         updateLastUpdateTime();
+      }
+
+      const ncoColorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+      function lookupNcoHierarchyMeta(categoryName, level, sampleNcoCode = "") {
+        const descFieldMap = {
+          division: "division_description",
+          sub_division: "sub_division_description",
+          group: "group_description",
+          family: "family_description",
+        };
+        const fieldMap = {
+          division: "division",
+          sub_division: "sub_division",
+          group: "group",
+          family: "family",
+        };
+
+        const field = fieldMap[level];
+        const occ = (occupations || []).find((item) => item[field] === categoryName);
+        const ncoCode = sampleNcoCode || occ?.nco_code || "";
+        let code = "";
+
+        if (ncoCode) {
+          const base = String(ncoCode).split(".")[0];
+          if (level === "division") code = base.substring(0, 1);
+          else if (level === "sub_division") code = base.substring(0, 2);
+          else if (level === "group") code = base.substring(0, 3);
+          else code = base;
+        }
+
+        return {
+          code,
+          description: occ ? (occ[descFieldMap[level]] || "") : "",
+        };
       }
 
       function drawNcoSearchDemandSunburst(historyData) {
@@ -606,6 +666,41 @@
           famNode.value += 1;
         });
 
+        // Compute total values bottom-up before grouping
+        function computeNodeValues(node) {
+          if (node.children && node.children.length > 0) {
+            node.value = node.children.reduce((sum, child) => sum + computeNodeValues(child), 0);
+          }
+          return node.value || 0;
+        }
+        computeNodeValues(rootData);
+
+        // Group tiny slivers into "Other" so slices are ALWAYS large and clickable
+        function groupTinySlices(node, maxChildren) {
+          if (!node.children || node.children.length === 0) return;
+          
+          if (node.children.length > maxChildren) {
+            node.children.sort((a, b) => b.value - a.value);
+            const top = node.children.slice(0, maxChildren - 1);
+            const rest = node.children.slice(maxChildren - 1);
+            
+            const otherValue = rest.reduce((sum, c) => sum + c.value, 0);
+            
+            top.push({
+              name: `Other (${rest.length} smaller)`,
+              value: otherValue,
+              children: [] // Truncate deeper levels for 'Other' to prevent clutter
+            });
+            
+            node.children = top;
+          }
+          
+          node.children.forEach(c => groupTinySlices(c, maxChildren));
+        }
+        
+        // Keep top 7 slices per parent, group the rest into "Other"
+        groupTinySlices(rootData, 8);
+
         // If there are no valid children, display "No Data" message
         if (rootData.children.length === 0) {
           d3.select(container).append("div")
@@ -631,80 +726,109 @@
 
         // 5. Partition layout
         const hierarchy = d3.hierarchy(rootData)
-          .sum(d => d.value)
+          .sum(d => (d.children && d.children.length > 0) ? 0 : d.value)
           .sort((a, b) => b.value - a.value);
 
         const partition = d3.partition()
-          .size([2 * Math.PI, radius]);
+          .size([2 * Math.PI, hierarchy.height + 1]);
 
         const root = partition(hierarchy);
+        root.each(d => {
+          d.current = { x0: d.x0, x1: d.x1, y0: d.depth, y1: d.depth + 1 };
+          d.target = { x0: d.x0, x1: d.x1, y0: d.depth, y1: d.depth + 1 };
+        });
 
-        // 6. Arc generator - spacing between slices (angular) and rings (concentric radial)
-        const centerRadius = 40;
+        // 6. Arc generator
+        const centerRadius = 45;
         const ringWidth = (radius - centerRadius) / 4;
 
         const arc = d3.arc()
           .startAngle(d => d.x0)
           .endAngle(d => d.x1)
-          .padAngle(d => 0.015)
+          .padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.01))
           .padRadius(radius / 2)
-          .innerRadius(d => centerRadius + (d.depth - 1) * ringWidth + 2.5)
-          .outerRadius(d => centerRadius + d.depth * ringWidth - 2.5);
+          .innerRadius(d => Math.max(0, centerRadius + (d.y0 - 1) * ringWidth))
+          .outerRadius(d => Math.max(0, centerRadius + d.y0 * ringWidth - 2));
 
-        // 7. Colors: Curated premium palette based on the NCO division with progressive brightness per level
+        // 7. Colors
         const divisionColors = {
-          "Managers": "#5dade2",            // Soft Sapphire Blue
-          "Professionals": "#af7ac5",       // Soft Amethyst Purple
-          "Technicians and Associate Professionals": "#48c9b0", // Soft Teal / Mint
-          "Clerks/Clerical Support Workers": "#52be80", // Sage Green
-          "Service and Sales Workers": "#f4d03f",       // Pale Amber / Gold
-          "Skilled Agricultural, Forestry and Fishery Workers": "#eb984e", // Soft Orange / Apricot
-          "Craft and Related Trades Workers": "#ec7063", // Soft Coral / Rose
-          "Plant and Machine Operators, and Assemblers": "#a569bd", // Soft Orchid
-          "Elementary Occupations": "#a6acaf" // Soft Silver / Gray
+          "Managers": "#5dade2",
+          "Professionals": "#af7ac5",
+          "Technicians and Associate Professionals": "#48c9b0",
+          "Clerks/Clerical Support Workers": "#52be80",
+          "Service and Sales Workers": "#f4d03f",
+          "Skilled Agricultural, Forestry and Fishery Workers": "#eb984e",
+          "Craft and Related Trades Workers": "#ec7063",
+          "Plant and Machine Operators, and Assemblers": "#a569bd",
+          "Elementary Occupations": "#a6acaf"
         };
 
         function getNodeColor(d) {
           if (d.depth === 0) return "#ffffff";
-          
           let p = d;
-          while (p.depth > 1) {
-            p = p.parent;
-          }
+          while (p.depth > 1) p = p.parent;
           const divisionName = p.data.name;
           const hexColor = divisionColors[divisionName] || ncoColorScale(divisionName) || "#cbd5e1";
           const baseColor = d3.color(hexColor);
-          
-          if (d.depth === 1) {
-            return baseColor.toString();
-          } else if (d.depth === 2) {
-            return baseColor.brighter(0.22).toString();
-          } else if (d.depth === 3) {
-            return baseColor.brighter(0.44).toString();
-          } else if (d.depth === 4) {
-            return baseColor.brighter(0.66).toString();
-          }
-          return baseColor.toString();
+          if (d.depth === 1) return baseColor.toString();
+          if (d.depth === 2) return baseColor.brighter(0.22).toString();
+          if (d.depth === 3) return baseColor.brighter(0.44).toString();
+          return baseColor.brighter(0.66).toString();
         }
+
+        // State for zooming
+        let zoomedNode = root;
 
         // 8. Render paths
         const paths = svg.selectAll("path")
           .data(root.descendants().filter(d => d.depth > 0))
           .enter()
           .append("path")
-          .attr("d", arc)
+          .attr("d", d => arc(d.current))
           .style("fill", d => getNodeColor(d))
           .style("stroke", "#ffffff")
           .style("stroke-width", "1px")
           .style("cursor", "pointer")
-          .style("transition", "opacity 0.2s ease");
+          .on("click", clicked);
 
-        // 9. Tooltip and hovering logic
-        const tooltip = d3.select("#sunburstTooltip");
+        function clicked(event, p) {
+          if (!p) return;
+          zoomedNode = p;
+
+          const t = svg.transition().duration(750);
+
+          root.each(d => {
+            let t_x0, t_x1;
+            if (p.depth === 0) {
+              t_x0 = d.x0;
+              t_x1 = d.x1;
+            } else {
+              t_x0 = Math.max(0, Math.min(1, (d.x0 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI;
+              t_x1 = Math.max(0, Math.min(1, (d.x1 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI;
+            }
+            d.target = { x0: t_x0, x1: t_x1, y0: d.depth, y1: d.depth + 1 };
+          });
+
+          paths.transition(t)
+            .tween("data", d => {
+              const i = d3.interpolate(d.current, d.target);
+              return t => d.current = i(t);
+            })
+            .style("display", d => (d.target.x1 - d.target.x0) < 0.005 ? "none" : "block")
+            .attrTween("d", d => () => arc(d.current));
+            
+          d3.select(".sunburst-center-value").text(p.value.toLocaleString());
+          d3.select(".sunburst-center-label")
+            .text(p.depth === 0 ? "Total Searches" : "Click to Reset")
+            .style("fill", p.depth === 0 ? "#64748b" : "#0284c7")
+            .style("cursor", p.depth === 0 ? "default" : "pointer");
+        }
+
+        // 9. Tooltip logic
         const activeInfo = document.getElementById("sunburstActiveInfo");
 
         paths.on("mouseover", function(event, d) {
-          paths.style("opacity", 0.35);
+          paths.style("opacity", node => node.style && node.style.display === "none" ? 0 : 0.35);
           
           const ancestorsNodes = [];
           let current = d;
@@ -733,97 +857,71 @@
           );
           const codePrefix = meta && meta.code ? `[Code ${meta.code}] ` : "";
 
-          // Show floating tooltip
-          tooltip.style("opacity", 1)
-            .html(`
-              <div style="font-weight: 700; font-size: 13px; color: #f8fafc; margin-bottom: 2px;">
-                ${codePrefix}${d.data.name}
-              </div>
-              <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 6px;">
-                ${levelLabel}
-              </div>
-              <div style="font-size: 13px; font-weight: 600; color: #38bdf8; border-top: 1px solid #334155; padding-top: 4px;">
-                ${d.value.toLocaleString()} search${d.value === 1 ? "" : "es"} (${share}%)
-              </div>
-            `);
-            
-          // Update details inside the activeInfo div outside the chart
           let displayName = d.data.name;
           if (displayName.includes(":")) {
             displayName = displayName.split(":").slice(1).join(":").trim();
           }
 
           if (activeInfo) {
-            activeInfo.innerHTML = `<span style="color: #475569; font-weight: 700;">${levelLabel}:</span> <span style="color: #0b3d91; font-weight: 600;">${displayName}</span>`;
+            activeInfo.innerHTML = `
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%;">
+                <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                  ${levelLabel}
+                </div>
+                <div style="font-size: 12px; font-weight: 700; color: #0f172a; text-align: center; line-height: 1.3;">
+                  ${codePrefix}${displayName}
+                </div>
+                <div style="font-size: 12px; font-weight: 600; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 12px; margin-top: 2px;">
+                  ${d.value.toLocaleString()} search${d.value === 1 ? "" : "es"} (${share}%)
+                </div>
+              </div>
+            `;
           }
 
-          // Update number inside the circle center
-          d3.select(".sunburst-center-value")
-            .style("font-size", "18px")
-            .text(d.value.toLocaleString());
-        })
-        .on("mousemove", function(event) {
-          const cardRect = container.getBoundingClientRect();
-          const tooltipWidth = tooltip.node().offsetWidth || 180;
-          const tooltipHeight = tooltip.node().offsetHeight || 80;
-          
-          // Default: position to the bottom-right of cursor
-          let xPos = event.clientX - cardRect.left + 15;
-          let yPos = event.clientY - cardRect.top + 15;
-          
-          // If it overflows right, show on left of cursor
-          if (xPos + tooltipWidth > cardRect.width - 10) {
-            xPos = event.clientX - cardRect.left - tooltipWidth - 15;
-          }
-          // If it overflows bottom, show above cursor
-          if (yPos + tooltipHeight > cardRect.height - 10) {
-            yPos = event.clientY - cardRect.top - tooltipHeight - 15;
-          }
-
-          // Strict boundary clamping so tooltip NEVER overflows the card borders
-          xPos = Math.max(8, Math.min(cardRect.width - tooltipWidth - 8, xPos));
-          yPos = Math.max(8, Math.min(cardRect.height - tooltipHeight - 8, yPos));
-
-          tooltip
-            .style("left", xPos + "px")
-            .style("top", yPos + "px");
+          d3.select(".sunburst-center-value").text(d.value.toLocaleString());
         })
         .on("mouseleave", function() {
           paths.style("opacity", 1.0)
             .style("stroke", "#ffffff")
             .style("stroke-width", "1px");
-          
-          tooltip.style("opacity", 0);
 
           if (activeInfo) {
             activeInfo.textContent = "Hover over a segment to view NCO classification details";
           }
 
-          d3.select(".sunburst-center-value")
-            .style("font-size", "18px")
-            .text(root.value.toLocaleString());
+          d3.select(".sunburst-center-value").text(zoomedNode.value.toLocaleString());
         });
 
-        // 10. Draw center circle display
-        svg.append("circle")
-          .attr("r", centerRadius + 2) // slightly overlap pad gap
+        // 10. Center circle (Zoom Reset)
+        const centerCircle = svg.append("circle")
+          .attr("r", centerRadius + 2)
           .style("fill", "#ffffff")
           .style("stroke", "#e2e8f0")
           .style("stroke-width", "1px")
-          .style("pointer-events", "none");
+          .style("cursor", "pointer")
+          .on("click", (event) => clicked(event, root));
 
-        const centerTextG = svg.append("g")
-          .attr("pointer-events", "none");
+        const centerTextG = svg.append("g").style("pointer-events", "none");
 
         centerTextG.append("text")
           .attr("class", "sunburst-center-value")
-          .attr("y", 6) // Perfectly centered
+          .attr("y", -2)
           .attr("text-anchor", "middle")
           .style("font-size", "18px")
           .style("font-weight", "800")
           .style("fill", "#0f172a")
           .style("font-family", "Arial, sans-serif")
           .text(root.value.toLocaleString());
+
+        centerTextG.append("text")
+          .attr("class", "sunburst-center-label")
+          .attr("y", 16)
+          .attr("text-anchor", "middle")
+          .style("font-size", "10px")
+          .style("font-weight", "600")
+          .style("fill", "#64748b")
+          .style("font-family", "Arial, sans-serif")
+          .text("Total Searches");
       }
 
       function applyAnalyticsControls() {
@@ -939,12 +1037,37 @@
 
       function updateAnalyticsMetricTiles(filteredHistory) {
         const total = filteredHistory.length;
-        const successCount = filteredHistory.filter(isSuccessfulAnalyticsEntry).length;
+        
+        let totalConfidence = 0;
+        let validScores = 0;
+        
+        filteredHistory.forEach(entry => {
+          if (isSuccessfulAnalyticsEntry(entry) && entry.occupation_title) {
+            const q = (entry.translated_query || entry.query || "").toLowerCase();
+            const t = entry.occupation_title.toLowerCase();
+            let score = 0;
+            if (t === q) {
+              score = 100;
+            } else if (t.includes(q) || q.includes(t)) {
+              score = 90;
+            } else if (q && t) {
+              const words = q.split(/\s+/).filter(w => w.length > 2);
+              const matches = words.filter(w => t.includes(w)).length;
+              score = words.length ? 60 + (matches / words.length) * 30 : 60;
+            } else {
+              score = 50;
+            }
+            totalConfidence += score;
+            validScores++;
+          }
+        });
+        
+        const avgConfidence = validScores > 0 ? (totalConfidence / validScores).toFixed(1) : "0.0";
         const translatedCount = filteredHistory.filter((entry) => entry.was_translated).length;
         const uniqueOccupations = new Set(filteredHistory.map((entry) => entry.occupation_title).filter(Boolean)).size;
 
         setTextContent("analyticsMetricSearches", total.toLocaleString());
-        setTextContent("analyticsMetricSuccess", total ? `${((successCount / total) * 100).toFixed(1)}%` : "0%");
+        setTextContent("analyticsMetricConfidence", `${avgConfidence}%`);
         setTextContent("analyticsMetricTranslated", total ? `${((translatedCount / total) * 100).toFixed(1)}%` : "0%");
         setTextContent("analyticsMetricOccupations", uniqueOccupations.toLocaleString());
       }
@@ -993,6 +1116,9 @@
       }
 
       function getAnalyticsEntryProperty(entry, propName) {
+        if (entry && entry[propName]) {
+          return entry[propName];
+        }
         const code = normalizeCodeForCompare(entry.nco_code || "");
         const matchedOccupation = occupations.find((occupation) =>
           normalizeCodeForCompare(occupation.nco_code) === code
@@ -1101,10 +1227,10 @@
 
       function refreshSearchFilterOptions(changedId = "") {
         const filters = getSearchFilterValues();
-        populateSearchFilter("divisionFilter", "All Divisions", "division", filters, changedId);
-        populateSearchFilter("subDivisionFilter", "All Sub Divisions", "sub_division", filters, changedId);
-        populateSearchFilter("groupFilter", "All Groups", "group", filters, changedId);
-        populateSearchFilter("familyFilter", "All Families", "family", filters, changedId);
+        if (changedId !== "divisionFilter") populateSearchFilter("divisionFilter", "All Divisions", "division", filters, changedId);
+        if (changedId !== "subDivisionFilter") populateSearchFilter("subDivisionFilter", "All Sub Divisions", "sub_division", filters, changedId);
+        if (changedId !== "groupFilter") populateSearchFilter("groupFilter", "All Groups", "group", filters, changedId);
+        if (changedId !== "familyFilter") populateSearchFilter("familyFilter", "All Families", "family", filters, changedId);
       }
 
       function updateSearchSubDivisionFilter() {
@@ -1212,38 +1338,6 @@
         }
       }
 
-      function getNcoFilterValues() {
-        return {
-          division: getMultiSelectValues("ncoDivisionFilter"),
-          sub_division: getMultiSelectValues("ncoSubDivisionFilter"),
-          group: getMultiSelectValues("ncoGroupFilter"),
-          family: getMultiSelectValues("ncoFamilyFilter"),
-        };
-      }
-
-      function refreshNcoFilterOptions(changedId = "") {
-        const filters = getNcoFilterValues();
-        populateNcoSearchFilter("ncoDivisionFilter", "All Divisions", "division", filters, changedId);
-        populateNcoSearchFilter("ncoSubDivisionFilter", "All Sub Divisions", "sub_division", filters, changedId);
-        populateNcoSearchFilter("ncoGroupFilter", "All Groups", "group", filters, changedId);
-        populateNcoSearchFilter("ncoFamilyFilter", "All Families", "family", filters, changedId);
-      }
-
-      function resetAllNcoFilters() {
-        ['ncoDivisionFilter', 'ncoSubDivisionFilter', 'ncoGroupFilter', 'ncoFamilyFilter'].forEach(id => {
-          setMultiSelectValues(id, []);
-          const labelMap = {
-            ncoDivisionFilter: "All Divisions",
-            ncoSubDivisionFilter: "All Sub Divisions",
-            ncoGroupFilter: "All Groups",
-            ncoFamilyFilter: "All Families",
-          };
-          updateMultiSelectDisplay(id, labelMap[id]);
-        });
-        
-        refreshNcoFilterOptions();
-        drawNcoBubbleChart();
-      }
 
       function escapeHtml(value) {
         return String(value || "")
@@ -1262,36 +1356,37 @@
         const end = start + recordsPerPage;
         const pageData = filteredOccupations.slice(start, end);
 
-        tbody.innerHTML = "";
+        let html = "";
         pageData.forEach((occupation) => {
-          const row = document.createElement("tr");
           const ncoDisplay = occupation.nco_code
             ? `<span class="nco-code">${formatNcoCode(occupation.nco_code)}</span>`
             : `<span style="color:#9ca3af; font-style:italic;">No Code</span>`;
-          row.innerHTML = `
-            <td>${occupation.row_id}</td>
-            <td>${escapeHtml(occupation.occupation_title)}</td>
-            <td>${ncoDisplay}</td>
-            <td>${escapeHtml(occupation.division || '—')}</td>
-            <td>${escapeHtml(occupation.sub_division || '—')}</td>
-            <td>${escapeHtml(occupation.group || '—')}</td>
-            <td>${escapeHtml(occupation.family || '—')}</td>
-            <td>
-              <div class="action-buttons">
-                <button type="button" class="action-btn edit" onclick="editOccupation(${occupation.row_id})" title="Edit">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button type="button" class="action-btn history" onclick="showPromptHistory(${occupation.row_id})" title="View History">
-                  <i class="fas fa-clock"></i>
-                </button>
-                <button type="button" class="action-btn delete" onclick="deleteOccupation(${occupation.row_id})" title="Delete">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </td>
+          html += `
+            <tr>
+              <td>${occupation.row_id}</td>
+              <td>${escapeHtml(occupation.occupation_title)}</td>
+              <td>${ncoDisplay}</td>
+              <td>${escapeHtml(occupation.division || '—')}</td>
+              <td>${escapeHtml(occupation.sub_division || '—')}</td>
+              <td>${escapeHtml(occupation.group || '—')}</td>
+              <td>${escapeHtml(occupation.family || '—')}</td>
+              <td>
+                <div class="action-buttons">
+                  <button type="button" class="action-btn edit" onclick="editOccupation(${occupation.row_id})" title="Edit">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button type="button" class="action-btn history" onclick="showPromptHistory(${occupation.row_id})" title="View History">
+                    <i class="fas fa-clock"></i>
+                  </button>
+                  <button type="button" class="action-btn delete" onclick="deleteOccupation(${occupation.row_id})" title="Delete">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
           `;
-          tbody.appendChild(row);
         });
+        tbody.innerHTML = html;
 
         const recordCount = document.getElementById("recordCount");
         if (recordCount) {
@@ -1344,11 +1439,7 @@
         currentPage = 1;
         clearTimeout(semanticSearchTimer);
         const mode = getAdminSearchMode();
-        if (mode === "semantic") {
-          semanticSearchTimer = setTimeout(() => applyFilters(), 250);
-          return;
-        }
-        applyFilters();
+        semanticSearchTimer = setTimeout(() => applyFilters(), mode === "semantic" ? 300 : 200);
       }
 
       function applyFilters() {
@@ -1889,7 +1980,7 @@
         window.analyticsLoading = true;
 
         try {
-          const response = await fetch("/admin/api/prompt-history?limit=5000");
+          const response = await fetch(`/admin/api/prompt-history?limit=${ANALYTICS_HISTORY_LIMIT}`);
           if (!response.ok) {
             throw new Error(`API error: ${response.status}`);
           }
@@ -1900,13 +1991,7 @@
           console.log("DEBUG: Fetched", historyData.length, "history entries");
 
           updateSearchAnalyticsCharts(historyData);
-          updateNcoAnalysisMetrics();
           updateLastUpdateTime();
-
-          if (document.getElementById("nco-analysis-tab")?.classList.contains("active")) {
-            refreshNcoFilterOptions();
-            drawNcoBubbleChart();
-          }
 
           console.log("Analytics data loaded successfully");
         } catch (error) {
@@ -1969,20 +2054,23 @@
           loadAnalyticsData();
           startAnalyticsAutoRefresh();
         } else if (tabName === 'database-tab') {
-          console.log('DEBUG: Database tab activated - loading occupation data');
-          loadOccupations();
+          if (occupations.length === 0) {
+            loadOccupations();
+          } else {
+            displayTable();
+          }
           if (refreshInterval) {
             clearInterval(refreshInterval);
             refreshInterval = null;
           }
         } else if (tabName === 'nco-analysis-tab') {
-          console.log('DEBUG: NCO Analysis tab activated');
+          console.log('DEBUG: State-wise Demand tab activated');
           if (refreshInterval) {
             clearInterval(refreshInterval);
             refreshInterval = null;
           }
-          loadNcoAnalysisData();
-          startAnalyticsAutoRefresh();
+          // Load India map when tab is activated
+          setTimeout(() => initIndiaMap(), 100);
         }
       }
 
@@ -2063,15 +2151,23 @@
         }
 
         emptyDiv.style.display = "none";
-        tbody.innerHTML = currentHistoryRows.map((row) => `
-          <tr>
+        tbody.innerHTML = currentHistoryRows.map((row) => {
+          let location = 'Unknown';
+          if (row.geo_city && row.geo_state) {
+            location = `${row.geo_city}, ${row.geo_state}`;
+          } else if (row.geo_state && row.geo_country) {
+            location = `${row.geo_state}, ${row.geo_country}`;
+          } else if (row.geo_country) {
+            location = row.geo_country;
+          }
+          return `<tr>
             <td>${new Date(row.ts).toLocaleString()}</td>
             <td>${row.query}</td>
-            <td>${row.top_k || "-"}</td>
-            <td>${row.returned_count || "-"}</td>
-            <td>${row.client_ip || "-"}</td>
-          </tr>
-        `).join("");
+            <td>${row.top_k || '-'}</td>
+            <td>${row.returned_count || '-'}</td>
+            <td>${location}</td>
+          </tr>`;
+        }).join('');
       }
 
       function filterPromptHistory() {
@@ -2090,15 +2186,23 @@
         }
 
         emptyDiv.style.display = "none";
-        tbody.innerHTML = filtered.map((row) => `
-          <tr>
+        tbody.innerHTML = filtered.map((row) => {
+          let location = 'Unknown';
+          if (row.geo_city && row.geo_state) {
+            location = `${row.geo_city}, ${row.geo_state}`;
+          } else if (row.geo_state && row.geo_country) {
+            location = `${row.geo_state}, ${row.geo_country}`;
+          } else if (row.geo_country) {
+            location = row.geo_country;
+          }
+          return `<tr>
             <td>${new Date(row.ts).toLocaleString()}</td>
             <td>${row.query}</td>
-            <td>${row.top_k || "-"}</td>
-            <td>${row.returned_count || "-"}</td>
-            <td>${row.client_ip || "-"}</td>
-          </tr>
-        `).join("");
+            <td>${row.top_k || '-'}</td>
+            <td>${row.returned_count || '-'}</td>
+            <td>${location}</td>
+          </tr>`;
+        }).join('');
       }
 
       // Utility functions
@@ -2211,7 +2315,19 @@
         applyAnalyticsControls();
       }
 
-      function exportData(format) {
+      async function ensureXlsxLoaded() {
+        if (window.XLSX) return;
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error("Failed to load Excel export library"));
+          document.body.appendChild(script);
+        });
+      }
+
+      async function exportData(format) {
         if (!filteredOccupations || filteredOccupations.length === 0) {
           showNotification("No data to export", "error");
           return;
@@ -2232,8 +2348,10 @@
         const date = new Date().toISOString().split('T')[0];
 
         if (format === 'excel') {
-          if (typeof XLSX === 'undefined') {
-            showNotification("Excel export library is not loaded.", "error");
+          try {
+            await ensureXlsxLoaded();
+          } catch (error) {
+            showNotification("Excel export library is not available.", "error");
             return;
           }
           const worksheet = XLSX.utils.json_to_sheet(data);
@@ -2274,916 +2392,317 @@
           document.body.removeChild(link);
           showNotification("CSV export downloaded successfully", "success");
         }
+          // Legacy NCO Search Demand Explorer and Bubble Chart code removed
       }
 
+      // ========================================================
+      // INDIA MAP — State-wise Occupation Demand Analysis
+      // Performance-optimised: rAF-throttled hover, direct element
+      // tracking for selection highlight, in-place Chart.js updates.
+      // ========================================================
 
-      // --- NCO Search Demand Explorer ---
-      let currentNcoLevel = "division";
-      let ncoSelectedPath = [];
-      let ncoSelectedNode = null;
-      let ncoSimulation = null;
-      let ncoSvg = null;
-      let ncoNodesData = [];
-      let mouseX = null;
-      let mouseY = null;
-      let ncoSimWidth = 800;
-      let ncoSimHeight = 620;
+      let stateDivisionChartInstance = null;
+      let _mapSelectedEl = null;   // direct ref to the selected <path> DOM node
+      let _mapStateMap   = {};     // stateName -> count (kept for re-colour on refresh)
+      let _mapSvgSelection = null; // d3 selection of the SVG — reused across calls
 
-      const ncoColorScale = d3.scaleOrdinal(d3.schemeCategory10);
-
-      function searchEntryMatchesNcoFilters(entry, filters, skipField = "") {
-        const fields = ["division", "sub_division", "group", "family"];
-        return fields.every((field) => {
-          if (field === skipField) return true;
-          const selected = filters[field];
-          if (!selected || selected.length === 0) return true;
-          const value = getAnalyticsEntryProperty(entry, field);
-          return selected.includes(value);
-        });
-      }
-
-      function getFilteredNcoSearchHistory() {
-        if (!allAnalyticsHistory || allAnalyticsHistory.length === 0) return [];
-
-        const ncoFilters = typeof getNcoFilterValues === "function" ? getNcoFilterValues() : {
-          division: [],
-          sub_division: [],
-          group: [],
-          family: [],
-        };
-
-        let filtered = allAnalyticsHistory.filter((entry) => searchEntryMatchesNcoFilters(entry, ncoFilters));
-
-        ncoSelectedPath.forEach((step) => {
-          const field = step.level === "sub_division" ? "sub_division" : step.level;
-          filtered = filtered.filter((entry) => getAnalyticsEntryProperty(entry, field) === step.name);
-        });
-
-        return filtered;
-      }
-
-      function populateNcoSearchFilter(selectId, allLabel, field, filters, changedId = "") {
-        const root = document.getElementById(selectId);
-        if (!root) return;
-        const menu = root.querySelector(".multi-select-menu");
-        if (!menu) return;
-
-        const currentValues = getMultiSelectValues(selectId);
-        menu.innerHTML = `
-          <div class="multi-select-clear" onclick="resetMultiSelect('${selectId}')" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #e5e7eb; color: #475569; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; background: #f8fafc; transition: background 0.2s ease;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
-            <i class="fas fa-undo"></i> Reset Filter
-          </div>
-        `;
-
-        const scopedFilters = { ...filters };
-        scopedFilters[field] = [];
-
-        let scopedHistory = allAnalyticsHistory || [];
-        scopedHistory = scopedHistory.filter((entry) => searchEntryMatchesNcoFilters(entry, scopedFilters));
-        ncoSelectedPath.forEach((step) => {
-          const pathField = step.level === "sub_division" ? "sub_division" : step.level;
-          scopedHistory = scopedHistory.filter((entry) => getAnalyticsEntryProperty(entry, pathField) === step.name);
-        });
-
-        const values = [...new Set(
-          scopedHistory
-            .map((entry) => getAnalyticsEntryProperty(entry, field))
-            .filter(Boolean)
-        )].sort();
-
-        values.forEach((value, index) => {
-          const optionId = `${selectId}-${index}`;
-          const label = document.createElement("label");
-          label.className = "multi-select-option";
-          label.innerHTML = `
-            <input type="checkbox" id="${optionId}" value="${escapeHtml(value)}" ${currentValues.includes(value) ? "checked" : ""} onchange="handleMultiSelectChange('${selectId}')" />
-            <span>${escapeHtml(value)}</span>
-          `;
-          menu.appendChild(label);
-        });
-
-        if (selectId !== changedId) {
-          const validSelections = currentValues.filter((value) => values.includes(value));
-          setMultiSelectValues(selectId, validSelections);
-        }
-        updateMultiSelectDisplay(selectId, allLabel);
-      }
-
-      function updateNcoAnalysisMetrics() {
-        const history = allAnalyticsHistory || [];
-        const total = history.length;
-        const successCount = history.filter(isSuccessfulAnalyticsEntry).length;
-        const uniqueDivisions = new Set(
-          history.map((entry) => getAnalyticsEntryProperty(entry, "division")).filter(Boolean)
-        ).size;
-        const uniqueOccupations = new Set(
-          history.map((entry) => entry.occupation_title).filter(Boolean)
-        ).size;
-
-        setTextContent("ncoMetricTotalSearches", total.toLocaleString());
-        setTextContent("ncoMetricDivisions", uniqueDivisions.toLocaleString());
-        setTextContent("ncoMetricOccupations", uniqueOccupations.toLocaleString());
-        setTextContent(
-          "ncoMetricSuccess",
-          total ? `${((successCount / total) * 100).toFixed(1)}%` : "0%"
+      // ----------------------------------------------------------
+      // Helper: get the state name from a GeoJSON feature
+      // ----------------------------------------------------------
+      function _getStateName(feature) {
+        return (
+          feature.properties?.NAME_1 ||
+          feature.properties?.st_nm  ||
+          feature.properties?.name   ||
+          ''
         );
       }
 
-      function lookupNcoHierarchyMeta(categoryName, level, sampleNcoCode = "") {
-        const descFieldMap = {
-          division: "division_description",
-          sub_division: "sub_division_description",
-          group: "group_description",
-          family: "family_description",
-        };
-        const fieldMap = {
-          division: "division",
-          sub_division: "sub_division",
-          group: "group",
-          family: "family",
-        };
+      // ----------------------------------------------------------
+      // initIndiaMap
+      // ----------------------------------------------------------
+      async function initIndiaMap() {
+        const container = document.getElementById('indiaMapContainer');
+        if (!container) return;
 
-        const field = fieldMap[level];
-        const occ = (occupations || []).find((item) => item[field] === categoryName);
-        const ncoCode = sampleNcoCode || occ?.nco_code || "";
-        let code = "";
-
-        if (ncoCode) {
-          const base = String(ncoCode).split(".")[0];
-          if (level === "division") code = base.substring(0, 1);
-          else if (level === "sub_division") code = base.substring(0, 2);
-          else if (level === "group") code = base.substring(0, 3);
-          else code = base;
+        // Show loading only when GeoJSON isn't cached yet
+        if (!window.__ncoIndiaGeoData) {
+          container.innerHTML =
+            '<div style="color:#94a3b8;font-size:14px;"><i class="fas fa-spinner fa-spin"></i>\u00a0Loading map…</div>';
         }
 
-        return {
-          code,
-          description: occ ? (occ[descFieldMap[level]] || "") : "",
-        };
-      }
+        // ── 1. Fetch state counts and GeoJSON in parallel ──────
+        let stateData = [];
+        let geoData;
 
-      function getChildFieldForNcoLevel(level) {
-        if (level === "division") return "sub_division";
-        if (level === "sub_division") return "group";
-        if (level === "group") return "family";
-        return "";
-      }
+        try {
+          const [statsRes, geoRes] = await Promise.all([
+            fetch('/admin/api/analytics/states'),
+            window.__ncoIndiaGeoData
+              ? Promise.resolve(null)   // skip network if already cached
+              : fetch('https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson')
+          ]);
 
-      function getAggregatedNcoData() {
-        let filtered = getFilteredNcoSearchHistory().filter(
-          (entry) => getAnalyticsEntryProperty(entry, currentNcoLevel)
-        );
-        if (filtered.length === 0) return [];
+          stateData = await statsRes.json();
+          if (!Array.isArray(stateData)) stateData = [];
 
-        const targetLevel = currentNcoLevel;
-        const groups = {};
-
-        filtered.forEach((entry) => {
-          const key = getAnalyticsEntryProperty(entry, targetLevel);
-          if (!key) return;
-
-          const parentField = targetLevel === "sub_division"
-            ? "division"
-            : targetLevel === "group"
-              ? "sub_division"
-              : targetLevel === "family"
-                ? "group"
-                : "";
-          const parentName = parentField ? getAnalyticsEntryProperty(entry, parentField) : "";
-          const meta = lookupNcoHierarchyMeta(key, targetLevel, entry.nco_code || "");
-
-          if (!groups[key]) {
-            groups[key] = {
-              name: key,
-              code: meta.code,
-              description: meta.description,
-              searchEntries: [],
-              parentName,
-              subdivisions: new Set(),
-              groups: new Set(),
-              families: new Set(),
-            };
+          if (geoRes) {
+            geoData = await geoRes.json();
+            window.__ncoIndiaGeoData = geoData;
+          } else {
+            geoData = window.__ncoIndiaGeoData;
           }
-
-          groups[key].searchEntries.push(entry);
-          const subDivision = getAnalyticsEntryProperty(entry, "sub_division");
-          const groupName = getAnalyticsEntryProperty(entry, "group");
-          const familyName = getAnalyticsEntryProperty(entry, "family");
-          if (subDivision) groups[key].subdivisions.add(subDivision);
-          if (groupName) groups[key].groups.add(groupName);
-          if (familyName) groups[key].families.add(familyName);
-        });
-
-        return Object.values(groups).map((group) => {
-          let childrenCount = 0;
-          if (targetLevel === "division") childrenCount = group.subdivisions.size;
-          else if (targetLevel === "sub_division") childrenCount = group.groups.size;
-          else if (targetLevel === "group") childrenCount = group.families.size;
-          else childrenCount = new Set(group.searchEntries.map((entry) => entry.occupation_title).filter(Boolean)).size;
-
-          const searchCount = group.searchEntries.length;
-
-          return {
-            name: group.name,
-            code: group.code,
-            description: group.description,
-            searchCount,
-            occupationsCount: searchCount,
-            childrenCount,
-            searchEntries: group.searchEntries,
-            parentName: group.parentName,
-            level: targetLevel,
-          };
-        });
-      }
-
-      // Measure and wrap bubble label text
-      let ncoMeasureCanvas = null;
-
-      function measureBubbleTextWidth(text, fontSize, fontWeight = "700") {
-        if (!ncoMeasureCanvas) {
-          ncoMeasureCanvas = document.createElement("canvas");
-        }
-        const ctx = ncoMeasureCanvas.getContext("2d");
-        ctx.font = `${fontWeight} ${fontSize}px Arial, sans-serif`;
-        return ctx.measureText(text).width;
-      }
-
-      function wrapTextToLines(text, maxWidth, fontSize) {
-        const words = String(text || "").split(/\s+/).filter(Boolean);
-        if (!words.length) return [""];
-
-        const lines = [];
-        let current = "";
-
-        words.forEach((word) => {
-          const candidate = current ? `${current} ${word}` : word;
-          if (measureBubbleTextWidth(candidate, fontSize) <= maxWidth) {
-            current = candidate;
-            return;
-          }
-
-          if (current) lines.push(current);
-
-          if (measureBubbleTextWidth(word, fontSize) <= maxWidth) {
-            current = word;
-            return;
-          }
-
-          let chunk = "";
-          for (const ch of word) {
-            const next = chunk + ch;
-            if (chunk && measureBubbleTextWidth(next, fontSize) > maxWidth) {
-              lines.push(chunk);
-              chunk = ch;
-            } else {
-              chunk = next;
-            }
-          }
-          current = chunk;
-        });
-
-        if (current) lines.push(current);
-        return lines;
-      }
-
-      function layoutNcoBubbleLabels(nodeSelection) {
-        nodeSelection.each(function (d) {
-          const group = d3.select(this);
-          group.selectAll(".nco-bubble-label").remove();
-
-          const r = d.r;
-          const maxWidth = r * 1.7;
-          const searchCount = d.searchCount ?? d.occupationsCount ?? 0;
-          const searchLabel = `${searchCount.toLocaleString()} search${searchCount === 1 ? "" : "es"}`;
-          const displayName = d.name.replace(/\//g, "/ ");
-
-          let titleSize = Math.min(13, Math.max(7, r * 2.4 / Math.cbrt(displayName.length + 8)));
-          let subSize = Math.max(8, Math.min(10, r / 5.5));
-          const subGap = 5;
-          const maxBlockHeight = Math.max(r * 1.35, 24);
-
-          let lines = wrapTextToLines(displayName, maxWidth, titleSize);
-          let lineHeight = titleSize * 1.18;
-
-          while (lines.length * lineHeight + subGap + subSize > maxBlockHeight && titleSize > 7) {
-            titleSize -= 0.5;
-            lines = wrapTextToLines(displayName, maxWidth, titleSize);
-            lineHeight = titleSize * 1.18;
-          }
-
-          if (lines.length * lineHeight + subGap + subSize > maxBlockHeight) {
-            const maxLines = Math.max(
-              1,
-              Math.floor((maxBlockHeight - subGap - subSize) / lineHeight)
-            );
-            if (lines.length > maxLines) {
-              lines = lines.slice(0, maxLines);
-              let lastLine = lines[maxLines - 1];
-              while (lastLine.length > 3 && measureBubbleTextWidth(`${lastLine}...`, titleSize) > maxWidth) {
-                lastLine = lastLine.slice(0, -1);
-              }
-              lines[maxLines - 1] = `${lastLine}...`;
-            }
-          }
-
-          const blockHeight = lines.length * lineHeight + subGap + subSize;
-          const startY = -blockHeight / 2 + lineHeight / 2;
-
-          const text = group
-            .append("text")
-            .attr("class", "nco-bubble-label")
-            .attr("text-anchor", "middle")
-            .style("pointer-events", "none");
-
-          lines.forEach((line, index) => {
-            text
-              .append("tspan")
-              .attr("class", "nco-bubble-text")
-              .attr("x", 0)
-              .attr("y", startY + index * lineHeight)
-              .style("font-size", `${titleSize}px`)
-              .style("font-weight", "700")
-              .style("fill", "#0f172a")
-              .style("font-family", "Arial, sans-serif")
-              .text(line);
-          });
-
-          text
-            .append("tspan")
-            .attr("class", "nco-bubble-subtext")
-            .attr("x", 0)
-            .attr("y", startY + lines.length * lineHeight + subGap)
-            .style("font-size", `${subSize}px`)
-            .style("font-weight", "600")
-            .style("fill", "#475569")
-            .style("font-family", "Arial, sans-serif")
-            .text(searchLabel);
-
-          d._labelLines = lines.length;
-        });
-      }
-
-      function drawNcoBubbleChart() {
-        console.log("DEBUG: drawNcoBubbleChart called");
-        
-        ncoSvg = d3.select("#ncoBubbleSvg");
-        if (ncoSvg.empty()) return;
-        
-        // Clear previous simulation and elements
-        if (ncoSimulation) {
-          ncoSimulation.stop();
-        }
-        ncoSvg.selectAll("*").remove();
-
-        const containerNode = ncoSvg.node().parentNode;
-        const width = containerNode.clientWidth || 800;
-        const height = 620;
-        ncoSvg.attr("width", width).attr("height", height);
-
-        const data = getAggregatedNcoData();
-        ncoNodesData = data;
-        
-        if (data.length === 0) {
-          ncoSvg.append("text")
-            .attr("x", width / 2)
-            .attr("y", height / 2)
-            .attr("text-anchor", "middle")
-            .attr("fill", "#94a3b8")
-            .attr("font-size", "16px")
-            .text("No user searches found matching the current filters.");
+        } catch (e) {
+          console.error('India map fetch error:', e);
+          container.innerHTML =
+            '<div style="color:#ef4444;font-size:13px;padding:20px;text-align:center;">'
+            + '<i class="fas fa-exclamation-triangle"></i>\u00a0Could not load India map. Check internet connection.</div>';
           return;
         }
 
-        // Define scales for radius
-        const minCount = d3.min(data, d => d.occupationsCount) || 1;
-        const maxCount = d3.max(data, d => d.occupationsCount) || 1;
-        
-        const rScale = d3.scaleSqrt()
-          .domain([minCount, maxCount])
-          .range([data.length > 50 ? 20 : 35, data.length > 50 ? 75 : 95]);
+        // ── 2. Build lookup and update metric strip ────────────
+        _mapStateMap = {};
+        let totalAll = 0;
+        stateData.forEach(d => { _mapStateMap[d.state] = d.count; totalAll += d.count; });
 
-        let maxScaleFactor = 1;
-        data.forEach((d) => {
-          d.r = rScale(d.occupationsCount);
-          const displayName = d.name.replace(/\//g, "/ ");
-          let requiredR = d.r;
+        const counts      = Object.values(_mapStateMap);
+        const activeStates = counts.length;
+        const topState    = stateData.length ? stateData[0].state : '\u2014';
+        document.getElementById('mapMetricTotal').textContent    = totalAll.toLocaleString();
+        document.getElementById('mapMetricStates').textContent   = activeStates;
+        document.getElementById('mapMetricTopState').textContent = topState || '\u2014';
+        document.getElementById('mapMetricTopOcc').textContent   = '\u2014';
 
-          for (let testR = Math.max(d.r, 28); testR <= d.r * 3.5; testR += 4) {
-            const titleSize = Math.min(13, Math.max(7, testR * 2.4 / Math.cbrt(displayName.length + 8)));
-            const subSize = Math.max(8, Math.min(10, testR / 5.5));
-            const lines = wrapTextToLines(displayName, testR * 1.7, titleSize);
-            const blockHeight = lines.length * titleSize * 1.18 + subSize + 5;
-            if (blockHeight <= testR * 1.9) {
-              requiredR = testR;
-              break;
-            }
-            requiredR = testR;
-          }
+        const minCount = counts.length ? Math.min(...counts) : 0;
+        const maxCount = counts.length ? Math.max(...counts) : 1;
+        const allSame  = minCount === maxCount;
 
-          if (requiredR > d.r) {
-            maxScaleFactor = Math.max(maxScaleFactor, requiredR / d.r);
-          }
-        });
-        
-        maxScaleFactor = Math.min(maxScaleFactor, 3.5);
+        const colorScale = d3.scaleLinear()
+          .domain(allSame ? [0, 1] : [minCount, maxCount])
+          .range(['#dbeafe', '#1e3a8a'])
+          .clamp(true);
 
-        let totalArea = 0;
-        data.forEach(d => {
-          d.r *= maxScaleFactor;
-          totalArea += Math.PI * d.r * d.r;
-        });
-
-        ncoSimWidth = width;
-        ncoSimHeight = height;
-        const requiredArea = totalArea * 2.8; // Enough room to breathe
-        const currentArea = width * height;
-        if (requiredArea > currentArea) {
-            const scale = Math.sqrt(requiredArea / currentArea);
-            ncoSimWidth = width * scale;
-            ncoSimHeight = height * scale;
+        // ── 3. If SVG already exists just recolour and return ──
+        if (_mapSvgSelection) {
+          _mapSvgSelection.selectAll('path').attr('fill', d => {
+            const name  = _getStateName(d);
+            const count = _mapStateMap[name];
+            if (!count)   return '#e2e8f0';
+            if (allSame)  return '#60a5fa';
+            return colorScale(count);
+          });
+          return;
         }
 
-        data.forEach((d, i) => {
-          d.x = ncoSimWidth / 2 + (Math.random() - 0.5) * ncoSimWidth * 0.5;
-          d.y = ncoSimHeight / 2 + (Math.random() - 0.5) * ncoSimHeight * 0.5;
-        });
+        // ── 4. First render: build the SVG ─────────────────────
+        container.innerHTML = '';
+        const width  = container.clientWidth || 600;
+        const height = Math.max(460, Math.round(width * 0.75));
 
-        // Legend setup
-        const legendContainer = document.getElementById("ncoLegend");
-        legendContainer.innerHTML = "";
-        
-        const uniqueParents = [...new Set(data.map(d => d.level === 'division' ? d.name : d.parentName))].filter(Boolean);
-        uniqueParents.forEach(parentName => {
-          const color = ncoColorScale(parentName);
-          const div = document.createElement("div");
-          div.className = "legend-item";
-          div.innerHTML = `
-            <div class="legend-color" style="background: ${color}"></div>
-            <span>${parentName}</span>
-          `;
-          legendContainer.appendChild(div);
-        });
+        // Pre-compute all path strings once (avoids repeated projection calls on hover)
+        const projection = d3.geoMercator().fitSize([width - 10, height - 10], geoData);
+        const pathGen    = d3.geoPath().projection(projection);
+        // Cache path strings keyed by feature index
+        const pathCache  = geoData.features.map(f => pathGen(f));
 
-        // Setup filters for neon glowing style
-        const defs = ncoSvg.append("defs");
-        
-        const dropShadow = defs.append("filter")
-          .attr("id", "bubbleShadow")
-          .attr("x", "-20%").attr("y", "-20%")
-          .attr("width", "140%").attr("height", "140%");
-        dropShadow.append("feDropShadow")
-          .attr("dx", "0").attr("dy", "0")
-          .attr("stdDeviation", "8")
-          .attr("flood-color", "#0f172a")
-          .attr("flood-opacity", "0.25");
+        const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svgEl.setAttribute('width', width);
+        svgEl.setAttribute('height', height);
+        svgEl.style.display = 'block';
+        container.appendChild(svgEl);
 
-        const gMain = ncoSvg.append("g");
-        const tooltip = d3.select("#ncoBubbleTooltip");
+        // Recreate tooltip inside container (innerHTML='' wiped the old one)
+        const tooltip = document.createElement('div');
+        tooltip.id = 'mapTooltip';
+        tooltip.style.cssText = 'position:absolute;pointer-events:none;background:rgba(15,23,42,0.92);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;z-index:9999;display:none;box-shadow:0 4px 16px rgba(0,0,0,0.18);line-height:1.6;right:12px;top:12px;';
+        container.appendChild(tooltip);
 
-        // Physics parameters
-        const repulsionVal = +document.getElementById("paramRepulsion").value;
-        const attractionVal = +document.getElementById("paramAttraction").value / 100;
+        _mapSvgSelection = d3.select(svgEl);
 
-        ncoSimulation = d3.forceSimulation(data)
-          .force("charge", d3.forceManyBody().strength(d => -Math.pow(d.r, 1.2) * repulsionVal * 0.1))
-          .force("x", d3.forceX(ncoSimWidth / 2).strength(attractionVal))
-          .force("y", d3.forceY(ncoSimHeight / 2).strength(attractionVal))
-          .force("collide", d3.forceCollide(d => d.r + 4).iterations(3));
+        // rAF throttle state for mousemove
+        let _rafPending = false;
+        let _pendingX, _pendingY, _pendingName, _pendingCount;
 
-        // Create groups
-        const node = gMain.selectAll(".node")
-          .data(data)
+        // ── 5. Append paths using the pre-computed strings ─────
+        _mapSvgSelection.selectAll('path')
+          .data(geoData.features)
           .enter()
-          .append("g")
-          .attr("class", "node")
-          .call(d3.drag()
-            .on("start", dragstarted)
-            .on("drag", dragged)
-            .on("end", dragended)
-          );
+          .append('path')
+          .attr('d', (_, i) => pathCache[i])        // use cache — no projection recalc
+          .attr('fill', d => {
+            const name  = _getStateName(d);
+            const count = _mapStateMap[name];
+            if (!count)  return '#e2e8f0';
+            if (allSame) return '#60a5fa';
+            return colorScale(count);
+          })
+          .attr('stroke', '#fff')
+          .attr('stroke-width', 0.8)
+          .style('cursor', 'pointer')
+          // NO CSS transition on filter — that forced GPU composite every frame
+          .on('mousemove', function(event, d) {
+            const name  = _getStateName(d);
+            const count = _mapStateMap[name] || 0;
 
-        // Bubble circle - Neon Hologram Style
-        node.append("circle")
-          .attr("class", "nco-bubble")
-          .attr("r", d => d.r)
-          .attr("fill", d => {
-             const parentName = d.level === 'division' ? d.name : d.parentName;
-             let c = d3.color(ncoColorScale(parentName));
-             c.opacity = 0.15;
-             return c.toString();
+            // Lighten via opacity instead of filter (cheaper, no GPU composite layer)
+            if (this !== _mapSelectedEl) {
+              this.style.opacity = '0.75';
+            }
+
+            // Throttle tooltip DOM writes to once per animation frame
+            _pendingName  = name;
+            _pendingCount = count;
+
+            if (!_rafPending) {
+              _rafPending = true;
+              requestAnimationFrame(() => {
+                // Pin tooltip to top-right of the map container (not cursor-relative)
+                tooltip.style.cssText =
+                  `display:block;position:absolute;right:12px;top:12px;left:auto;`;
+                tooltip.innerHTML =
+                  `<strong>${_pendingName}</strong><br>Searches:&nbsp;<strong>${_pendingCount.toLocaleString()}</strong>`;
+                _rafPending = false;
+              });
+            }
           })
-          .style("filter", "url(#bubbleShadow)")
-          .style("stroke", d => {
-             const parentName = d.level === 'division' ? d.name : d.parentName;
-             return ncoColorScale(parentName);
+          .on('mouseleave', function() {
+            tooltip.style.display = 'none';
+            if (this !== _mapSelectedEl) {
+              this.style.opacity = '1';
+            }
           })
-          .style("stroke-width", "2.5px")
-          .on("mouseover", function(event, d) {
-             const parentName = d.level === 'division' ? d.name : d.parentName;
-             let c = d3.color(ncoColorScale(parentName));
-             c.opacity = 0.4;
-             d3.select(this).style("fill", c.toString())
-                            .style("filter", `drop-shadow(0 0 15px ${ncoColorScale(parentName)})`);
-             
-             tooltip.style("opacity", 1)
-               .html(`
-                 <h5>${d.name}</h5>
-                 <div class="meta-row"><span>Code:</span><span class="meta-val">${d.code}</span></div>
-                 <div class="meta-row"><span>Level:</span><span class="meta-val" style="text-transform: capitalize;">${d.level.replace('_', ' ')}</span></div>
-                 <div class="meta-row"><span>${d.level === 'family' ? 'Matched Jobs' : 'Sub-categories'}:</span><span class="meta-val">${d.childrenCount}</span></div>
-                 <div class="meta-row"><span>Total Searches:</span><span class="meta-val">${d.searchCount ?? d.occupationsCount}</span></div>
-                 <p style="margin: 8px 0 0 0; font-size:11px; color:#94a3b8; line-height: 1.4; border-top: 1px solid #334155; padding-top:6px;">
-                   ${d.description ? d.description.substring(0, 120) + '...' : 'No description available.'}
-                 </p>
-               `);
-          })
-          .on("mousemove", function(event) {
-            const containerRect = containerNode.getBoundingClientRect();
-            tooltip
-              .style("left", (event.clientX - containerRect.left + 15) + "px")
-              .style("top", (event.clientY - containerRect.top + 15) + "px");
-          })
-          .on("mouseout", function(event, d) {
-             const parentName = d.level === 'division' ? d.name : d.parentName;
-             let c = d3.color(ncoColorScale(parentName));
-             c.opacity = 0.15;
-             d3.select(this).style("fill", c.toString())
-                            .style("filter", "url(#bubbleShadow)");
-             tooltip.style("opacity", 0);
-          })
-          .on("click", function(event, d) {
-            selectNcoNode(d, this);
-            event.stopPropagation();
+          .on('click', function(event, d) {
+            const name = _getStateName(d);
+
+            // Reset previous selection cheaply — just two attribute writes on one node
+            if (_mapSelectedEl) {
+              _mapSelectedEl.setAttribute('stroke', '#fff');
+              _mapSelectedEl.setAttribute('stroke-width', '0.8');
+              _mapSelectedEl.style.opacity = '1';
+            }
+
+            // Highlight new selection
+            this.setAttribute('stroke', '#f59e0b');
+            this.setAttribute('stroke-width', '2.5');
+            this.style.opacity = '1';
+            _mapSelectedEl = this;
+
+            selectState(name);
           });
+      }
 
+      // ----------------------------------------------------------
+      // selectState — drill-down panel with zero Chart.js recreate
+      // ----------------------------------------------------------
+      async function selectState(stateName) {
+        const placeholder = document.getElementById('stateDetailPlaceholder');
+        const content     = document.getElementById('stateDetailContent');
+        placeholder.style.display = 'flex';
+        content.style.display     = 'none';
 
-        // Bubble labels (title + search count in one centered block)
-        layoutNcoBubbleLabels(node);
-
-
-
-        // Zoom / Pan setup
-        let initialScale = 1;
-        if (ncoSimWidth > width || ncoSimHeight > height) {
-           initialScale = Math.min(width / ncoSimWidth, height / ncoSimHeight) * 0.9;
+        let data;
+        try {
+          const res = await fetch(`/admin/api/analytics/states/${encodeURIComponent(stateName)}`);
+          data = await res.json();
+        } catch (e) {
+          console.error('State detail fetch failed:', e);
+          placeholder.style.display = 'none';
+          content.style.display     = 'flex';
+          return;
         }
-        
-        const zoom = d3.zoom()
-          .scaleExtent([0.1, 8])
-          .on("zoom", (event) => {
-            gMain.attr("transform", event.transform);
+
+        // Update header
+        document.getElementById('stateDetailName').textContent  = stateName;
+        document.getElementById('stateDetailTotal').textContent = (data.total || 0).toLocaleString();
+
+        // Update metric strip
+        const firstOcc = data.occupations?.[0];
+        if (firstOcc) {
+          const title = firstOcc.title;
+          document.getElementById('mapMetricTopOcc').textContent =
+            title.length > 18 ? title.slice(0, 18) + '\u2026' : title;
+        }
+
+        // ── Occupation list via DocumentFragment (no innerHTML concat) ──
+        const list = document.getElementById('stateOccupationList');
+        list.innerHTML = '';
+        if (!data.occupations?.length) {
+          const empty = document.createElement('li');
+          empty.style.cssText = 'font-size:12px;color:#94a3b8;text-align:center;padding:12px;';
+          empty.textContent = 'No search data available for this state.';
+          list.appendChild(empty);
+        } else {
+          const frag = document.createDocumentFragment();
+          data.occupations.forEach((occ, idx) => {
+            const li = document.createElement('li');
+            li.style.cssText =
+              `display:flex;align-items:center;gap:8px;`
+              + `background:${idx === 0 ? '#eff6ff' : '#f8fafc'};`
+              + `border:1px solid ${idx === 0 ? '#bfdbfe' : '#e2e8f0'};`
+              + `border-radius:8px;padding:8px 10px;`;
+            li.innerHTML =
+              `<span style="font-size:12px;font-weight:700;color:${idx === 0 ? '#1d4ed8' : '#64748b'};min-width:18px;">${idx + 1}.</span>`
+              + `<div style="flex:1;min-width:0;">`
+              + `<div style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${occ.title}</div>`
+              + `<div style="font-size:11px;color:#64748b;">${occ.count.toLocaleString()} searches\u00a0\u00b7\u00a0${occ.percentage}%</div>`
+              + `</div>`
+              + `<div style="width:50px;background:#e2e8f0;border-radius:4px;height:4px;">`
+              + `<div style="width:${occ.percentage}%;background:#3b82f6;border-radius:4px;height:4px;"></div>`
+              + `</div>`;
+            frag.appendChild(li);
           });
-        ncoSvg.call(zoom);
+          list.appendChild(frag);
+        }
 
-        // Apply initial transform to center the simulation in the viewport
-        let tx = (width - ncoSimWidth * initialScale) / 2;
-        let ty = (height - ncoSimHeight * initialScale) / 2;
-        ncoSvg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(initialScale));
+        // ── Division chart: update in-place, never destroy/recreate ──
+        const divCanvas = document.getElementById('stateDivisionChart');
+        const divEmpty  = document.getElementById('stateDivisionEmpty');
 
-        // Mouse attraction physics helpers
-        ncoSvg.on("mousemove", function(event) {
-          const coords = d3.pointer(event);
-          mouseX = coords[0];
-          mouseY = coords[1];
-        });
+        if (!data.divisions?.length) {
+          divCanvas.style.display = 'none';
+          divEmpty.style.display  = 'block';
+        } else {
+          divCanvas.style.display = 'block';
+          divEmpty.style.display  = 'none';
 
-        ncoSvg.on("mouseleave", function() {
-          mouseX = null;
-          mouseY = null;
-        });
+          const labels = data.divisions.map(d =>
+            d.division.length > 22 ? d.division.slice(0, 22) + '\u2026' : d.division
+          );
+          const values = data.divisions.map(d => d.count);
 
-        // Clicking SVG canvas deselects active node
-        ncoSvg.on("click", function() {
-          deselectNcoNode();
-        });
-
-        ncoSimulation.on("tick", () => {
-          if (mouseX !== null && mouseY !== null) {
-            data.forEach(d => {
-              const dx = mouseX - d.x;
-              const dy = mouseY - d.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < 220 && dist > 10) {
-                d.vx += (dx / dist) * 0.08;
-                d.vy += (dy / dist) * 0.08;
+          if (stateDivisionChartInstance) {
+            // Update existing chart data without destroying — ~10× faster
+            stateDivisionChartInstance.data.labels                   = labels;
+            stateDivisionChartInstance.data.datasets[0].data         = values;
+            stateDivisionChartInstance.update('none');  // 'none' skips animations
+          } else {
+            stateDivisionChartInstance = new Chart(divCanvas, {
+              type: 'bar',
+              data: {
+                labels,
+                datasets: [{
+                  label: 'Searches',
+                  data: values,
+                  backgroundColor: '#6366f1',
+                  borderRadius: 5,
+                  borderSkipped: false,
+                }]
+              },
+              options: {
+                animation: { duration: 250 },
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  x: { beginAtZero: true, ticks: { color: '#64748b', font: { size: 10 } } },
+                  y: { ticks: { color: '#1e293b', font: { size: 10 } } }
+                }
               }
             });
           }
-
-          node.attr("transform", d => {
-            d.x = Math.max(d.r, Math.min(ncoSimWidth - d.r, d.x));
-            d.y = Math.max(d.r, Math.min(ncoSimHeight - d.r, d.y));
-            return `translate(${d.x}, ${d.y})`;
-          });
-        });
-
-        function dragstarted(event, d) {
-          if (!event.active) ncoSimulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
         }
 
-        function dragged(event, d) {
-          d.fx = event.x;
-          d.fy = event.y;
-        }
-
-        function dragended(event, d) {
-          if (!event.active) ncoSimulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        }
-        
-        highlightNcoBubbles();
-      }
-
-      function selectNcoNode(d, element) {
-        ncoSelectedNode = d;
-
-        d3.selectAll(".nco-bubble")
-          .style("stroke-width", 2.5)
-          .style("filter", "url(#bubbleShadow)");
-
-        if (element) {
-          d3.select(element)
-            .style("stroke-width", 5)
-            .style("filter", "drop-shadow(0 0 15px rgba(255, 255, 255, 0.8))");
-        }
-
-        document.getElementById("ncoDetailFloating").classList.add("active");
-        document.getElementById("ncoDetailPlaceholder").style.display = "none";
-        document.getElementById("ncoDetailContent").style.display = "flex";
-
-        const titleEl = document.getElementById("ncoDetailName");
-        const typeEl = document.getElementById("ncoDetailType");
-        const codeEl = document.getElementById("ncoDetailCode");
-        const descEl = document.getElementById("ncoDetailDesc");
-        const statChildrenEl = document.getElementById("ncoDetailStatChildren");
-        const statChildrenLabel = document.getElementById("ncoDetailStatChildrenLabel");
-        const statJobsEl = document.getElementById("ncoDetailStatJobs");
-        const childListEl = document.getElementById("ncoChildList");
-        const btnDrillDown = document.getElementById("btnNcoDrillDown");
-
-        titleEl.textContent = d.name;
-        codeEl.textContent = `CODE: ${d.code}`;
-        descEl.textContent = d.description || "No specific classification description registered for this entry.";
-        
-        let levelText = d.level;
-        if (levelText === "sub_division") levelText = "Sub-Division";
-        typeEl.textContent = levelText;
-        typeEl.className = `badge mb-2 bg-${d.level === 'division' ? 'primary' : d.level === 'sub_division' ? 'success' : d.level === 'group' ? 'warning' : 'danger'}`;
-
-        statJobsEl.textContent = (d.searchCount ?? d.occupationsCount).toLocaleString();
-        
-        let childrenLabel = "Children";
-        if (d.level === "division") {
-          childrenLabel = "Sub Divs Searched";
-        } else if (d.level === "sub_division") {
-          childrenLabel = "Groups Searched";
-        } else if (d.level === "group") {
-          childrenLabel = "Families Searched";
-        } else if (d.level === "family") {
-          childrenLabel = "Matched Jobs";
-        }
-        statChildrenLabel.textContent = childrenLabel;
-        statChildrenEl.textContent = d.childrenCount;
-
-        childListEl.innerHTML = "";
-        
-        if (d.level === "family") {
-          btnDrillDown.disabled = true;
-          btnDrillDown.innerHTML = `<i class="fas fa-search-plus"></i> Drill Down (Max Depth)`;
-          
-          const occupationCounts = {};
-          d.searchEntries.forEach((entry) => {
-            const title = entry.occupation_title || "Unknown occupation";
-            occupationCounts[title] = (occupationCounts[title] || 0) + 1;
-          });
-
-          Object.entries(occupationCounts)
-            .sort(([, a], [, b]) => b - a)
-            .forEach(([title, count]) => {
-            const item = document.createElement("div");
-            item.className = "child-list-item";
-            item.innerHTML = `
-              <div style="font-weight: 500;">${escapeHtml(title)}</div>
-              <div style="font-size:11px; color:#6b7280;">${count} search${count === 1 ? "" : "es"}</div>
-            `;
-            item.onclick = (e) => {
-              switchTab('database-tab', document.querySelector('[onclick*="database-tab"]'));
-              const searchInput = document.getElementById("searchInput");
-              if (searchInput) {
-                searchInput.value = title;
-                searchOccupations();
-              }
-              e.stopPropagation();
-            };
-            childListEl.appendChild(item);
-          });
-        } else {
-          btnDrillDown.disabled = false;
-          btnDrillDown.innerHTML = `<i class="fas fa-search-plus"></i> Drill Down`;
-
-          const childField = getChildFieldForNcoLevel(d.level);
-          const childCounts = {};
-          d.searchEntries.forEach((entry) => {
-            const childName = getAnalyticsEntryProperty(entry, childField);
-            if (!childName) return;
-            childCounts[childName] = (childCounts[childName] || 0) + 1;
-          });
-
-          Object.entries(childCounts)
-            .sort(([, a], [, b]) => b - a)
-            .forEach(([childName, count]) => {
-            const item = document.createElement("div");
-            item.className = "child-list-item";
-            item.innerHTML = `
-              <div>${escapeHtml(childName)}</div>
-              <div style="font-size:11px; color:#6b7280;">${count} search${count === 1 ? "" : "es"}</div>
-            `;
-            item.onclick = (e) => {
-              drillDownToNode(d, childName);
-              e.stopPropagation();
-            };
-            childListEl.appendChild(item);
-          });
-        }
-      }
-
-      function deselectNcoNode() {
-        ncoSelectedNode = null;
-        d3.selectAll(".nco-bubble")
-          .style("stroke-width", 2.5)
-          .style("filter", "url(#bubbleShadow)");
-
-        document.getElementById("ncoDetailFloating").classList.remove("active");
-        document.getElementById("ncoDetailPlaceholder").style.display = "block";
-        document.getElementById("ncoDetailContent").style.display = "none";
-      }
-
-      function drillDownSelected() {
-        if (!ncoSelectedNode) return;
-        drillDownToNode(null, ncoSelectedNode.name);
-      }
-
-      function drillDownToNode(parentNode, categoryName) {
-        const levelOrder = ["division", "sub_division", "group", "family"];
-        let targetLevelIdx = levelOrder.indexOf(currentNcoLevel) + 1;
-        
-        if (targetLevelIdx >= levelOrder.length) return;
-        
-        ncoSelectedPath.push({
-          level: currentNcoLevel,
-          name: parentNode ? parentNode.name : categoryName
-        });
-        
-        currentNcoLevel = levelOrder[targetLevelIdx];
-        
-        const levelRadio = document.getElementById(`level${currentNcoLevel === 'sub_division' ? 'Sub' : currentNcoLevel === 'group' ? 'Group' : currentNcoLevel === 'family' ? 'Family' : 'Div'}`);
-        if (levelRadio) levelRadio.checked = true;
-
-        updateNcoBreadcrumbs();
-        deselectNcoNode();
-        drawNcoBubbleChart();
-      }
-
-      function drillUpOneLevel() {
-        if (ncoSelectedPath.length === 0) return;
-        
-        const previousStep = ncoSelectedPath.pop();
-        currentNcoLevel = previousStep.level;
-
-        const levelRadio = document.getElementById(`level${currentNcoLevel === 'sub_division' ? 'Sub' : currentNcoLevel === 'group' ? 'Group' : currentNcoLevel === 'family' ? 'Family' : 'Div'}`);
-        if (levelRadio) levelRadio.checked = true;
-
-        updateNcoBreadcrumbs();
-        deselectNcoNode();
-        drawNcoBubbleChart();
-      }
-
-      function drillUpTo(pathIndex) {
-        if (pathIndex === 0) {
-          ncoSelectedPath = [];
-          currentNcoLevel = "division";
-        } else {
-          ncoSelectedPath = ncoSelectedPath.slice(0, pathIndex);
-          currentNcoLevel = ncoSelectedPath[ncoSelectedPath.length - 1].level;
-        }
-
-        const levelRadio = document.getElementById(`level${currentNcoLevel === 'sub_division' ? 'Sub' : currentNcoLevel === 'group' ? 'Group' : currentNcoLevel === 'family' ? 'Family' : 'Div'}`);
-        if (levelRadio) levelRadio.checked = true;
-
-        updateNcoBreadcrumbs();
-        deselectNcoNode();
-        drawNcoBubbleChart();
-      }
-
-      function changeNcoLevel(newLevel) {
-        currentNcoLevel = newLevel;
-        const levelOrder = ["division", "sub_division", "group", "family"];
-        const targetIdx = levelOrder.indexOf(newLevel);
-        
-        ncoSelectedPath = ncoSelectedPath.filter(step => {
-          const stepIdx = levelOrder.indexOf(step.level);
-          return stepIdx < targetIdx;
-        });
-
-        updateNcoBreadcrumbs();
-        deselectNcoNode();
-        drawNcoBubbleChart();
-      }
-
-      function updateNcoBreadcrumbs() {
-        const breadcrumbs = document.getElementById("ncoBreadcrumbs");
-        if (!breadcrumbs) return;
-
-        let html = `<li class="breadcrumb-item"><a href="javascript:void(0)" onclick="drillUpTo(0)">All Divisions</a></li>`;
-        
-        ncoSelectedPath.forEach((step, idx) => {
-          if (idx === ncoSelectedPath.length - 1) {
-            html += `<li class="breadcrumb-item active" aria-current="page">${step.name}</li>`;
-          } else {
-            html += `<li class="breadcrumb-item"><a href="javascript:void(0)" onclick="drillUpTo(${idx + 1})">${step.name}</a></li>`;
-          }
-        });
-
-        breadcrumbs.innerHTML = html;
-
-        const btnBack = document.getElementById("btnNcoBack");
-        if (btnBack) {
-          btnBack.disabled = ncoSelectedPath.length === 0;
-        }
-      }
-
-      function highlightNcoBubbles() {
-        const q = (document.getElementById("ncoBubbleSearch").value || "").toLowerCase().trim();
-        const bubbles = d3.selectAll(".nco-bubble");
-        
-        if (!q) {
-          bubbles.classed("searched", false).style("opacity", 1);
-          d3.selectAll(".nco-bubble-label").style("opacity", 1);
-          return;
-        }
-
-        bubbles.each(function(d) {
-          const match = d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q);
-          d3.select(this)
-            .classed("searched", match)
-            .style("opacity", match ? 1 : 0.25);
-        });
-
-        d3.selectAll(".nco-bubble-label").style("opacity", function() {
-          const datum = d3.select(this.parentNode).datum();
-          if (!datum) return 1;
-          const match = datum.name.toLowerCase().includes(q) || datum.code.toLowerCase().includes(q);
-          return match ? 1 : 0.15;
-        });
-      }
-
-      function updatePhysicsParams() {
-        const repulsionVal = +document.getElementById("paramRepulsion").value;
-        const attractionVal = +document.getElementById("paramAttraction").value / 100;
-
-        document.getElementById("valRepulsion").textContent = repulsionVal;
-        document.getElementById("valAttraction").textContent = (attractionVal * 100).toFixed(0) + "%";
-
-        if (ncoSimulation) {
-          ncoSimulation.force("charge", d3.forceManyBody().strength(d => -Math.pow(d.r, 1.2) * repulsionVal * 0.1));
-          const containerNode = d3.select("#ncoBubbleSvg").node().parentNode;
-          ncoSimulation.force("x", d3.forceX(ncoSimWidth / 2).strength(attractionVal));
-          ncoSimulation.force("y", d3.forceY(ncoSimHeight / 2).strength(attractionVal));
-          ncoSimulation.alpha(0.3).restart();
-        }
-      }
-
-      function resetNcoExplorer() {
-        ncoSelectedPath = [];
-        currentNcoLevel = "division";
-        document.getElementById("ncoBubbleSearch").value = "";
-        
-        const levelRadio = document.getElementById("levelDiv");
-        if (levelRadio) levelRadio.checked = true;
-        
-        document.getElementById("paramRepulsion").value = 20;
-        document.getElementById("paramAttraction").value = 5;
-        document.getElementById("valRepulsion").textContent = "20";
-        document.getElementById("valAttraction").textContent = "5%";
-
-        updateNcoBreadcrumbs();
-        deselectNcoNode();
-        drawNcoBubbleChart();
-      }
-
-      function lookupInDatabase() {
-        if (!ncoSelectedNode) return;
-        switchTab('database-tab', document.querySelector('[onclick*="database-tab"]'));
-        
-        resetAllDatabaseFilters();
-        
-        const searchInput = document.getElementById("searchInput");
-        if (searchInput) {
-          searchInput.value = ncoSelectedNode.name;
-          searchOccupations();
-        }
+        placeholder.style.display = 'none';
+        content.style.display     = 'flex';
       }

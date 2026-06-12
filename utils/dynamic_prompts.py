@@ -8,7 +8,7 @@ script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if script_dir not in sys.path:
     sys.path.append(script_dir)
 
-import db_store
+from database import db_store
 
 # Load the metadata to analyze occupation titles from PostgreSQL.
 _, metadata = db_store.load_search_documents()

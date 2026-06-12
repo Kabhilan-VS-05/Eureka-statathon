@@ -6,7 +6,7 @@
     <title>National Classification of Occupations</title>
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='gov-style.css') }}"
+      href="{{ url_for('static', filename='gov-style.css') }}?v={{ asset_version }}"
     />
     <link
       rel="stylesheet"
@@ -14,7 +14,7 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
       /* ── Font & Base ───────────────────────────────────────────── */
       body, input, textarea, select, button {
@@ -53,45 +53,45 @@
 
       .hero-search-card {
         background: #ffffff;
-        border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.15);
-        padding: 20px 20px 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        padding: 24px;
         max-width: 800px;
         margin: 0 auto 0;
         position: relative;
         z-index: 2;
+        border: 1px solid #e2e8f0;
       }
 
       /* ── Redesigned Search Bar ───────────────────────────────────── */
       .hero-search-row {
         display: flex;
         align-items: stretch;
-        gap: 10px;
-        margin-bottom: 14px;
+        gap: 12px;
+        margin-bottom: 16px;
       }
 
       .hero-search-input-wrap {
         flex: 1;
         display: flex;
         align-items: center;
-        background: #f8fafc;
-        border: 2px solid #e2e8f0;
-        border-radius: 14px;
+        background: #ffffff;
+        border: 1px solid #94a3b8;
+        border-radius: 4px;
         padding: 4px 12px;
         gap: 8px;
         transition: border-color 0.2s, box-shadow 0.2s;
-        min-height: 54px;
+        min-height: 50px;
         box-sizing: border-box;
       }
 
       .hero-search-input-wrap:focus-within {
         border-color: #003366;
-        background: #ffffff;
-        box-shadow: 0 0 0 4px rgba(0,51,102,0.1);
+        box-shadow: 0 0 0 2px rgba(0,51,102,0.2);
       }
 
       .hero-search-input-wrap .search-icon {
-        color: #94a3b8;
+        color: #64748b;
         font-size: 16px;
         flex-shrink: 0;
       }
@@ -115,40 +115,36 @@
       }
 
       #occupationSearch::placeholder {
-        color: #94a3b8;
+        color: #64748b;
         font-size: 15px;
       }
 
       .hero-search-btn {
-        background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
-        color: #1a1a1a;
+        background: #138808;
+        color: #ffffff;
         border: none;
-        border-radius: 14px;
-        padding: 14px 26px;
-        font-size: 15px;
-        font-weight: 700;
+        border-radius: 4px;
+        padding: 0 32px;
+        font-size: 16px;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: background 0.2s;
         font-family: 'Inter', Arial, sans-serif;
-        box-shadow: 0 4px 12px rgba(255,193,7,0.4);
         flex-shrink: 0;
         white-space: nowrap;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 54px;
+        min-height: 50px;
         box-sizing: border-box;
       }
 
       .hero-search-btn:hover {
-        background: linear-gradient(135deg, #ffb300 0%, #ffa000 100%);
-        box-shadow: 0 6px 16px rgba(255,193,7,0.5);
-        transform: translateY(-1px);
+        background: #0f6e06;
       }
 
       .hero-search-btn:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 8px rgba(255,193,7,0.3);
+        background: #0c5705;
       }
 
       /* ── Search Mode Row inside card ─────────────────────────────── */
@@ -706,6 +702,10 @@
             src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
             alt="Emblem of India"
             class="logo"
+            width="48"
+            height="48"
+            loading="lazy"
+            decoding="async"
           />
           <div class="logo-text">
             <span class="main-title"
@@ -720,6 +720,10 @@
             src="https://gc.mic.gov.in/statathon-2025.png"
             alt="Statathon Logo"
             class="g20-logo"
+            width="120"
+            height="48"
+            loading="lazy"
+            decoding="async"
           />
           <!-- Other logos can be added here -->
         </div>
@@ -2719,9 +2723,18 @@
         });
       }
 
+      function scheduleDirectoryLoad() {
+        const run = () => loadDirectory();
+        if ("requestIdleCallback" in window) {
+          requestIdleCallback(run, { timeout: 2500 });
+        } else {
+          setTimeout(run, 1200);
+        }
+      }
+
       // Initial load
       updateSearchModeUI();
-      loadDirectory();
+      scheduleDirectoryLoad();
       initDropdownEvents();
     </script>
   </body>

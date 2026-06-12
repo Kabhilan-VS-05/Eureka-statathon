@@ -15,7 +15,7 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_DIR not in sys.path:
     sys.path.append(PROJECT_DIR)
 
-import db_store
+from database import db_store
 
 
 CSV_PATH = os.path.join(PROJECT_DIR, "data", "raw", "nco_dataset_v6_final.csv")
