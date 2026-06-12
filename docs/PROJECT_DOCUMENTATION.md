@@ -37,7 +37,7 @@ Dependencies declared in `requirements.txt`:
 
 ## 3) Repository Structure (Functional)
 - `app.py`: Main Flask app, API routes, admin validation, data mutation, search asset rebuilds
-- `db_store.py`: PostgreSQL schema and storage helpers
+- `database/db_store.py`: PostgreSQL schema and storage helpers
 - `scripts/migrate_to_postgres.py`: one-time importer from the previous CSV/JSON/SQLite files into PostgreSQL
 - `templates/index.html`: User search UI (general search + NCO search + voice + language flow)
 - `templates/admin/dashboard.html`: Admin dashboard (analytics charts + database management CRUD)
@@ -47,7 +47,7 @@ Dependencies declared in `requirements.txt`:
 - `scripts/03_build_faiss_index.py`: Build FAISS index and store it in PostgreSQL
 - `scripts/04_search.py`: CLI semantic search test utility
 - `scripts/05_searchGN.py`: Build simple graph-network keyword map
-- `scripts/06_searchapp.py`: Runtime hybrid search implementation
+- `utils/searchapp.py`: Runtime hybrid search implementation
 - `utils/translation_service.py`: language detection + translation chain
 - `utils/dynamic_prompts.py`: dynamic prompt generation + PIGS v3 (Specificity & Diversity Engine)
 - `data/raw/nco_dataset_v6_final.csv`: previous import source for migration
@@ -94,7 +94,7 @@ Dependencies declared in `requirements.txt`:
 
 ## 5) Search Architecture
 ### Runtime module loading
-`app.py` dynamically loads `scripts/06_searchapp.py` at startup.
+`app.py` imports the core search engine from `utils/searchapp.py` at startup.
 
 ### Hybrid scoring in `06_searchapp.py`
 For each query:

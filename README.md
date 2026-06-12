@@ -42,4 +42,4 @@ The application has two major surfaces:
 
 ## Documentation
 For deep technical architecture, routes, data flow, validations, status, and maintenance notes, see:
-- `PROJECT_DOCUMENTATION.md`
+- `docs/PROJECT_DOCUMENTATION.md`

@@ -122,7 +122,7 @@ sudo systemctl restart nco-backend
 
 **Recommended production command (inside `venv`):**
 ```bash
-gunicorn -c gunicorn.conf.py wsgi:app
+gunicorn -c config/gunicorn.conf.py config.wsgi:app
 ```
 
 Set `ASSET_VERSION=2` (or higher) in `.env` after frontend/CSS/JS updates so browsers fetch fresh static files.
@@ -172,6 +172,6 @@ sudo systemctl restart nco-backend
 ```
 
 ### Frontend Decoupling
-Note that the `frontend/` directory is no longer auto-generated or used by the system.
+Note that the `frontend/` prototype directory has been completely removed.
 - HTML layout changes should be made to `templates/admin/dashboard.html`.
 - CSS and JS modifications should be made directly to `static/admin_dashboard.css` and `static/admin_dashboard.js`.
