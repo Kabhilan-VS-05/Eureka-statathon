@@ -38,22 +38,16 @@ Dependencies declared in `requirements.txt`:
 ## 3) Repository Structure (Functional)
 - `app.py`: Main Flask app, API routes, admin validation, data mutation, search asset rebuilds
 - `database/db_store.py`: PostgreSQL schema and storage helpers
+- `config/wsgi.py`: Production WSGI entry point
+- `config/gunicorn.conf.py`: Production web server configuration
 - `scripts/migrate_to_postgres.py`: one-time importer from the previous CSV/JSON/SQLite files into PostgreSQL
-- `templates/index.html`: User search UI (general search + NCO search + voice + language flow)
-- `templates/admin/dashboard.html`: Admin dashboard (analytics charts + database management CRUD)
-- `static/gov-style.css`: Main user UI styling
-- `scripts/01_preparation.py`: PostgreSQL occupations to semantic documents + metadata
-- `scripts/02_generateEmbedding.py`: Generate embeddings and store them in PostgreSQL
-- `scripts/03_build_faiss_index.py`: Build FAISS index and store it in PostgreSQL
-- `scripts/04_search.py`: CLI semantic search test utility
-- `scripts/05_searchGN.py`: Build simple graph-network keyword map
-- `utils/searchapp.py`: Runtime hybrid search implementation
-- `utils/translation_service.py`: language detection + translation chain
-- `utils/dynamic_prompts.py`: dynamic prompt generation + PIGS v3 (Specificity & Diversity Engine)
+- `scripts/legacy_pipeline/`: Legacy standalone scripts for generating embeddings and graphs (no longer used by runtime)
+- `templates/`: HTML views for user and admin
+- `static/`: Frontend assets (CSS, JS)
+- `utils/`: Core helper services including `searchapp.py`, `dynamic_prompts.py`, `translation_service.py`, `ip_location.py`, and `nco_prompts.py`
 - `data/raw/nco_dataset_v6_final.csv`: previous import source for migration
-- `data/processed/*.json`: previous import source for migration/history
-- `models/*`: legacy local artifacts no longer used by runtime
-- `data/admin.db`: previous admin settings source for migration
+- `data/processed/`: previous JSON sources for migration
+- `tests/`: Project tests directory
 
 ---
 
@@ -169,15 +163,7 @@ Flow:
 - `PUT /admin/api/occupations/<row_id>` (password protected)
 - `DELETE /admin/api/occupations/<row_id>` (password protected)
 
-Legacy/aux analytics endpoints still present:
-- `/admin/api/analytics/divisions`
-- `/admin/api/analytics/confidence`
-- `/admin/api/analytics/top-occupations`
-- `/admin/api/analytics/search-trend`
-- `/admin/api/analytics/languages`
-- `/admin/api/analytics/low-confidence`
-
-Note: current admin charts primarily consume `/admin/api/prompt-history` directly.
+Note: All admin charts and metrics are computed dynamically on the frontend via JavaScript (in `admin_dashboard.js`) by consuming the `/admin/api/prompt-history` endpoint. Legacy granular analytics routes have been removed.
 
 ---
 
@@ -293,10 +279,10 @@ File: `templates/admin/dashboard.html`
 
 ## Rebuild pipeline manually
 ```bash
-python scripts/01_preparation.py
-python scripts/05_searchGN.py
-python scripts/02_generateEmbedding.py
-python scripts/03_build_faiss_index.py
+python scripts/legacy_pipeline/01_preparation.py
+python scripts/legacy_pipeline/05_searchGN.py
+python scripts/legacy_pipeline/02_generateEmbedding.py
+python scripts/legacy_pipeline/03_build_faiss_index.py
 ```
 
 ---
@@ -318,6 +304,9 @@ As of latest changes in this workspace:
 - Redesigned search flow to use a "title-first, semantic-fill" strategy with instant debounced rendering (no spinner or artificial delays).
 - Updated Translation Usage chart to show detailed breakdown by detected language (English, Tamil, Hindi, etc.) instead of a binary state.
 - Cleaned up obsolete scratch files and static vocabulary lists.
+- Replaced "Zero-Result Queries" analytics metric with an "Avg Match Confidence" heuristic using string similarity.
+- Optimized the Sunburst Chart logic to dynamically group microscopic slices into an "Other" category to prevent rendering crashes, and fixed its leaf-node summation calculation.
+- Executed a major repository restructuring to achieve a professional standard: merged all scattered documents into `docs/`, relocated deployment configurations to `config/`, relocated the core database interface to `database/db_store.py`, and completely removed unused prototype files (`frontend/`).
 
 ---
 
