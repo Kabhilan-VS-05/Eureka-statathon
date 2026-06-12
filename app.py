@@ -49,7 +49,7 @@ app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing globally
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'nco_dataset_v6_final.csv')
-ASSET_VERSION = os.getenv("ASSET_VERSION", "7")
+ASSET_VERSION = os.getenv("ASSET_VERSION", "8")
 STATIC_CACHE_SECONDS = int(os.getenv("STATIC_CACHE_SECONDS", "86400"))
 
 
