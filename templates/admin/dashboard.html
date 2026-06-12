@@ -16,6 +16,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='admin_dashboard.css') }}?v={{ asset_version }}">
   </head>
   <body>
+    <!-- Global Loading Overlay -->
+    <div id="globalLoadingOverlay" class="global-loading-overlay">
+      <div class="spinner-container">
+        <div class="gov-spinner">
+          <div class="spinner-band saffron"></div>
+          <div class="spinner-band white"></div>
+          <div class="spinner-band green"></div>
+        </div>
+        <div class="loading-text">Fetching Analytics Data...</div>
+      </div>
+    </div>
     <!-- Government Header -->
     <header class="site-header">
       <div class="header-main">

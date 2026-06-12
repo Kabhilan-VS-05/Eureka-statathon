@@ -428,7 +428,9 @@ def search_jobs():
 
                 top = results[0] if results else {}
                 top_details = top.get("details") or {}
-                client_ip = request.remote_addr
+                client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+                if client_ip:
+                    client_ip = client_ip.split(',')[0].strip()
                 geo = {}
                 try:
                     geo = resolve_ip_location(client_ip)

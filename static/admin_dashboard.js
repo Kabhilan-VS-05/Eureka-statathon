@@ -1978,6 +1978,11 @@
           return;
         }
         window.analyticsLoading = true;
+        
+        const overlay = document.getElementById('globalLoadingOverlay');
+        if (overlay && !window._initialLoadComplete) {
+            overlay.classList.remove('hidden');
+        }
 
         try {
           const response = await fetch(`/admin/api/prompt-history?limit=${ANALYTICS_HISTORY_LIMIT}`);
@@ -1999,6 +2004,10 @@
           showNotification("Failed to load analytics data", "error");
         } finally {
           window.analyticsLoading = false;
+          if (overlay && !window._initialLoadComplete) {
+              overlay.classList.add('hidden');
+              window._initialLoadComplete = true;
+          }
         }
       }
 
