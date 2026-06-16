@@ -1,0 +1,13 @@
+2026-06-13 00:10:45,502 - stress_test - INFO - Starting Stress Test...
+2026-06-13 00:10:45,502 - stress_test - INFO - Stress step: Target 10 RPS
+2026-06-13 00:10:51,033 - stress_test - INFO - Result: 9.8 RPS, Err: 0.0%, Lat: 62.5ms
+2026-06-13 00:10:51,033 - stress_test - INFO - Stress step: Target 35 RPS
+2026-06-13 00:11:00,739 - stress_test - INFO - Result: 18.5 RPS, Err: 0.0%, Lat: 1683.2ms
+2026-06-13 00:11:00,739 - stress_test - INFO - Stress step: Target 60 RPS
+2026-06-13 00:11:17,316 - stress_test - INFO - Result: 17.6 RPS, Err: 0.0%, Lat: 3123.4ms
+2026-06-13 00:11:17,316 - stress_test - INFO - Stress step: Target 85 RPS
+2026-06-13 00:11:39,614 - stress_test - INFO - Result: 18.3 RPS, Err: 0.0%, Lat: 4361.0ms
+2026-06-13 00:11:39,614 - stress_test - INFO - Stress step: Target 110 RPS
+2026-06-13 00:12:07,765 - stress_test - INFO - Result: 18.3 RPS, Err: 0.4%, Lat: 5691.3ms
+2026-06-13 00:12:07,765 - stress_test - WARNING - Failure point reached at target 110 RPS
+2026-06-13 00:12:08,011 - stress_test - INFO - Stress Test Completed.

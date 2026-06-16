@@ -1,318 +1,472 @@
 # PROJECT_DOCUMENTATION.md
 
-## 1) Project Overview
-This project is an AI-assisted **NCO occupation search and management system** built with Flask.
+> Last updated: 2026-06-15
+
+---
+
+## 1. Project Overview
+
+An AI-assisted **NCO occupation search and management system** built with Flask and deployed on AWS.
 
 Primary goals:
 - Map free-text job queries to **NCO 2015** occupations using semantic retrieval.
-- Support multilingual input via translation.
-- Provide an admin dashboard for analytics and controlled CRUD over occupation data.
+- Support multilingual input (any Indian language) via automatic translation.
+- Provide an admin dashboard for real-time analytics, state-wise demand analysis, and controlled CRUD over occupation data.
 
-Core runtime entrypoint:
-- `app.py`
-
-Current runtime mode:
-- Flask dev server on port `5000` (`debug=True` in `app.py`).
+Runtime entrypoint: `app.py`
 
 ---
 
-## 2) Tech Stack
-- Backend: Python, Flask
-- Retrieval/ML: `sentence-transformers` (`BAAI/bge-small-en-v1.5`), `faiss-cpu`, `numpy`
-- Data utilities: `pandas`, `csv`, `json`
-- Translation + language detection: `requests`, `langdetect`
-- Storage: PostgreSQL for occupations, admin settings/password hash, prompt history, semantic documents, graph data, embeddings, and serialized FAISS index bytes
-- Frontend: HTML/CSS/Vanilla JS + Bootstrap + Chart.js
+## 2. Tech Stack
 
-Dependencies declared in `requirements.txt`:
-- `pandas`
-- `numpy`
-- `flask`
-- `sentence-transformers`
-- `faiss-cpu`
-- `langdetect`
-- `requests`
+| Layer | Technology |
+|---|---|
+| Backend | Python 3, Flask 3.1 |
+| ML / Retrieval | `sentence-transformers` (`BAAI/bge-small-en-v1.5`), `faiss-cpu`, `numpy` |
+| Database | PostgreSQL (via `psycopg2-binary`) |
+| Auth | Werkzeug `generate_password_hash` / `check_password_hash` (PBKDF2-SHA256) |
+| Translation | `deep-translator`, `langdetect`, `requests` |
+| IP Geolocation | `ip-api.com` (free tier, no API key) |
+| Compression | `flask-compress` (gzip all text/JSON responses) |
+| Frontend | Vanilla JS + Bootstrap 5.3 + Chart.js 4.4 + D3 v7 |
+| Web server | Gunicorn (production), Flask dev server (local) |
 
 ---
 
-## 3) Repository Structure (Functional)
-- `app.py`: Main Flask app, API routes, admin validation, data mutation, search asset rebuilds
-- `database/db_store.py`: PostgreSQL schema and storage helpers
-- `config/wsgi.py`: Production WSGI entry point
-- `config/gunicorn.conf.py`: Production web server configuration
-- `scripts/migrate_to_postgres.py`: one-time importer from the previous CSV/JSON/SQLite files into PostgreSQL
-- `scripts/legacy_pipeline/`: Legacy standalone scripts for generating embeddings and graphs (no longer used by runtime)
-- `templates/`: HTML views for user and admin
-- `static/`: Frontend assets (CSS, JS)
-- `utils/`: Core helper services including `searchapp.py`, `dynamic_prompts.py`, `translation_service.py`, `ip_location.py`, and `nco_prompts.py`
-- `data/raw/nco_dataset_v6_final.csv`: previous import source for migration
-- `data/processed/`: previous JSON sources for migration
-- `tests/`: Project tests directory
+## 3. Repository Structure
 
----
-
-## 4) Data Model and Artifacts
-### Primary source-of-truth data
-- PostgreSQL table: `occupations`
-- Previous CSV import source: `data/raw/nco_dataset_v6_final.csv`
-- Important columns used:
-  - `S No`
-  - `Occupational Title`
-  - `NCO 2015`
-  - `NCO 2004`
-  - `Division`
-  - `Sub Division`
-  - `Group`
-  - `Family`
-  - `Division Description`
-  - `Sub Division Description`
-  - `Group Description`
-  - `Family Description`
-  - `Occupation Description`
-
-### Derived/search artifacts
-- PostgreSQL table: `search_documents`
-- PostgreSQL table: `nco_graph`
-- PostgreSQL table: `search_assets`
-  - `nco_embeddings.npy`
-  - `nco_faiss.index`
-
-### Operational telemetry
-- PostgreSQL table: `prompt_history` (search history, top result details, query metadata)
-
-### Admin settings
-- PostgreSQL table: `admin_settings(key TEXT PRIMARY KEY, value TEXT)`
-- Password stored as PBKDF2 hash with salt in format: `salt$digest`
-
----
-
-## 5) Search Architecture
-### Runtime module loading
-`app.py` imports the core search engine from `utils/searchapp.py` at startup.
-
-### Hybrid scoring in `06_searchapp.py`
-For each query:
-1. Encode query using SBERT/BGE model (`BAAI/bge-small-en-v1.5`) with query instruction prepended.
-2. Search two FAISS indexes:
-   - Full occupation document index
-   - Title-only index
-3. For each candidate, compute:
-   - semantic score
-   - title score
-   - graph overlap score from `nco_graph.json`
-4. Blend with weights and boosts:
-   - `ALPHA=0.7`, `BETA=0.3`
-   - score multiplier and title overlap boost
-5. Return top-k sorted by final score.
-
-### NCO direct search mode
-`/api/search` supports `search_mode: "nco"` and performs exact normalized match against NCO 2015 codes.
-
----
-
-## 6) Prompt Intelligence (PIGS)
-PIGS logic is exposed from `06_searchapp.py` and used in `app.py` response generation.
-
-It:
-- Computes hierarchy-level similarity signals (division/sub-division/group/family context)
-- Generates friendly guidance suggestions
-- Combines with `utils/dynamic_prompts.py` examples for prompt refinement
-
-Returned in `/api/search` under key `pigs`.
-
----
-
-## 7) Translation and Language Handling
-Implemented in `utils/translation_service.py`.
-
-Flow:
-- Detect language confidence using `langdetect`.
-- If ambiguous and user language not confirmed, backend sends `language_ambiguity` object.
-- Translation strategy:
-  - MyMemory first (fast)
-  - LibreTranslate fallback endpoints
-  - Optional Bhashini integration (credentials required)
-
-`/api/translate` is available for explicit translation calls.
-
----
-
-## 8) Flask Routes and API Contracts
-## UI routes
-- `GET /` -> `templates/index.html`
-- `GET /admin` -> `templates/admin/dashboard.html`
-
-## Public API
-- `POST /api/search`
-  - Input: `query`, optional `user_language`, `search_mode`, `top_k`
-  - Modes:
-    - `general`: semantic search
-    - `nco`: exact NCO code lookup
-  - Output includes results, translation notice, ambiguity flags, pigs details, counts
-
-- `POST /api/translate`
-  - Input: `text`, `source_lang`, `target_lang`, `preferred_service`
-
-- `GET /api/languages`
-  - Returns supported language map
-
-## Admin API
-- `GET /admin/api/prompt-history?limit=...&occupation_title=...`
-- `GET /admin/api/occupations`
-- `POST /admin/api/occupations` (password protected)
-- `PUT /admin/api/occupations/<row_id>` (password protected)
-- `DELETE /admin/api/occupations/<row_id>` (password protected)
-
-Note: All admin charts and metrics are computed dynamically on the frontend via JavaScript (in `admin_dashboard.js`) by consuming the `/admin/api/prompt-history` endpoint. Legacy granular analytics routes have been removed.
-
----
-
-## 9) Admin Security and Validation (Current State)
-## Password protection
-- Add, Edit, Delete all require `admin_password`.
-- First successful password usage initializes and locks admin password hash in SQLite.
-
-## NCO format rules enforced backend-side
-- NCO 2015: `XXXX.XXXX` mandatory on add/edit
-- NCO 2004: `XXXX.XX`
-  - optional on add
-  - required on edit only when existing row already has an NCO 2004 code
-
-## Required field validation
-On add/edit:
-- Occupation Title
-- Division
-- Sub Division
-- Group
-- Family
-- Occupation Description
-
-## Duplicate prevention
-- Duplicate NCO 2015 blocked
-- Duplicate NCO 2004 blocked when provided
-
-## Rebuild behavior after successful mutation
-Add/Edit/Delete triggers:
-1. CSV rewrite
-2. Rebuild semantic documents + metadata
-3. Rebuild graph JSON
-4. Re-encode embeddings
-5. Rebuild FAISS index
-
-This guarantees consistency but can be compute-heavy during frequent edits.
-
----
-
-## 10) Admin Frontend Behavior (Current)
-File: `templates/admin/dashboard.html`
-
-### Analytics tab
-- Replaced earlier static analysis blocks with 6 chart cards.
-- Uses Chart.js with periodic refresh logic.
-- Layout constrained to fixed chart-card heights to prevent runaway page growth.
-
-### Database Management tab
-- Occupation table with search/filter/pagination.
-- Add/Edit modals include segmented NCO input UX:
-  - NCO 2015: first 4 digits + second 4 digits
-  - NCO 2004: first 4 digits + second 2 digits
-- Edit modal behavior:
-  - If row has NCO 2004 code, editable section shown
-  - If missing, NCO 2004 edit section hidden/disabled
-- Cascading dropdowns implemented:
-  - Division -> Sub Division -> Group -> Family
-
-### Validation UX
-- Required field checks in JS before submission
-- Numeric sanitization and fixed-length checks for segmented NCO parts
-- Server errors displayed via notification (includes wrong password/duplicate/format errors)
-
----
-
-## 11) End-to-End Request Flows
-## Search flow
-1. User submits query from `index.html`.
-2. Backend optionally translates query.
-3. Search module returns ranked results.
-4. Backend appends prompt history entry.
-5. UI renders ranked results + optional PIGS guidance.
-
-## Admin add/edit/delete flow
-1. User fills modal and enters admin password.
-2. Frontend validates required fields + NCO segmentation.
-3. API validates again (authoritative).
-4. On success, CSV and search assets rebuild.
-5. UI refreshes occupation table and analytics.
-
----
-
-## 12) Known Gaps / Risks
-- Full asset rebuild on each admin mutation may be slow for large datasets.
-- `dashboard.html` contains duplicate `refreshAnalytics` function declarations and legacy fragments from earlier iterations; behavior works but file can be refactored for maintainability.
-- Some text in templates/scripts appears mojibake-encoded in source comments/labels; functional impact is minimal but readability can improve.
-- Flask app currently runs in debug mode by default in `__main__`.
-
----
-
-## 13) Runbook
-## Local setup
-1. Create/activate Python env.
-2. Create PostgreSQL database and set `DATABASE_URL`, for example:
-   ```bash
-   set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/statathon_nco
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Run the one-time migration/import:
-   ```bash
-   python scripts/migrate_to_postgres.py
-   ```
-5. Run:
-   ```bash
-   python app.py
-   ```
-6. Open:
-   - App: `http://127.0.0.1:5000/`
-   - Admin: `http://127.0.0.1:5000/admin`
-
-## Rebuild pipeline manually
-```bash
-python scripts/legacy_pipeline/01_preparation.py
-python scripts/legacy_pipeline/05_searchGN.py
-python scripts/legacy_pipeline/02_generateEmbedding.py
-python scripts/legacy_pipeline/03_build_faiss_index.py
+```
+app.py                          Main Flask app — routes, auth, search, analytics
+requirements.txt                Pinned dependencies
+database/
+  db_store.py                   All PostgreSQL schema creation and helpers
+utils/
+  searchapp.py                  SBERT + FAISS hybrid search engine (in-memory)
+  dynamic_prompts.py            PIGS v2/v3 prompt intelligence system
+  translation_service.py        Multi-service translation (MyMemory, LibreTranslate)
+  ip_location.py                IP → city/state/country via ip-api.com (cached)
+  nco_prompts.py                NCO query prompt templates
+templates/
+  index.html                    Public search page
+  admin/
+    login.html                  Admin login page (government-themed)
+    dashboard.html              Admin dashboard (3 tabs)
+static/
+  gov-style.css                 Public page styles
+  admin_dashboard.css           Admin dashboard styles
+  admin_dashboard.js            Admin dashboard JS (all tab logic)
+scripts/
+  migrate_to_postgres.py        One-time CSV → PostgreSQL migration
+  set_admin_password.py         Interactive admin password manager
+  import_prompt_history.py      Bulk import prompt_history from JSON file
+docs/
+  PROJECT_DOCUMENTATION.md      This file
+  AWS_TROUBLESHOOTING_GUIDE.md  AWS deployment troubleshooting
+  GITHUB_AWS_WORKFLOW.md        GitHub → AWS CI/CD workflow
+config/
+  wsgi.py                       Production WSGI entry point
+  gunicorn.conf.py              Gunicorn configuration
+data/raw/
+  nco_dataset_v6_final.csv      Source CSV for migration (not runtime)
 ```
 
 ---
 
-## 14) Current Status Snapshot
-As of latest changes in this workspace:
-- Admin analytics redesigned into chart-based real-time dashboard.
-- Chart expansion/infinite page growth issue addressed with constrained card/canvas sizing.
-- Occupation add/edit module upgraded with:
-  - password protection on edit
-  - segmented NCO 2015 and NCO 2004 inputs
-  - NCO format enforcement
-  - duplicate checks
-  - required hierarchy validations
-  - conditional NCO 2004 edit visibility
-- Existing search APIs and core architecture preserved.
-- Added a 4-level NCO Search Demand Sunburst Chart (Division, Sub-Division, Group, Family) to the admin dashboard.
-- Integrated PIGS v3 (Prompt Intelligence & Guidance System) to use query specificity and result diversity heuristics instead of basic semantic scores.
-- Redesigned search flow to use a "title-first, semantic-fill" strategy with instant debounced rendering (no spinner or artificial delays).
-- Updated Translation Usage chart to show detailed breakdown by detected language (English, Tamil, Hindi, etc.) instead of a binary state.
-- Cleaned up obsolete scratch files and static vocabulary lists.
-- Replaced "Zero-Result Queries" analytics metric with an "Avg Match Confidence" heuristic using string similarity.
-- Optimized the Sunburst Chart logic to dynamically group microscopic slices into an "Other" category to prevent rendering crashes, and fixed its leaf-node summation calculation.
-- Executed a major repository restructuring to achieve a professional standard: merged all scattered documents into `docs/`, relocated deployment configurations to `config/`, relocated the core database interface to `database/db_store.py`, and completely removed unused prototype files (`frontend/`).
+## 4. PostgreSQL Schema
+
+### `occupations` — master occupation data
+| Column | Type | Notes |
+|---|---|---|
+| id | SERIAL PK | |
+| s_no | TEXT | |
+| occupation_title | TEXT | |
+| nco_2015 | TEXT UNIQUE | Format: `XXXX.XXXX` |
+| nco_2004 | TEXT | Format: `XXXX.XX` (optional) |
+| division | TEXT | |
+| sub_division | TEXT | |
+| group | TEXT | |
+| family | TEXT | |
+| occupation_description | TEXT | |
+| family_description | TEXT | |
+| group_description | TEXT | |
+
+### `search_documents` — FAISS index source text
+| Column | Type | Notes |
+|---|---|---|
+| row_id | INT PK → occupations.id | |
+| document | TEXT | Text used to build embeddings |
+| metadata | JSONB | occupation_title, nco_2015, row_id |
+
+### `search_assets` — serialized binary artifacts
+| Column | Type |
+|---|---|
+| name | TEXT PK |
+| data | BYTEA |
+
+Stores: `nco_faiss.index`, `nco_embeddings.npy`
+
+### `nco_graph` — keyword graph for overlap scoring
+| Column | Type |
+|---|---|
+| nco_code | TEXT PK |
+| data | JSONB |
+
+Each entry: `{"keywords": [...], "related": [...]}`
+
+### `prompt_history` — search telemetry
+| Column | Type | Notes |
+|---|---|---|
+| id | BIGSERIAL PK | |
+| ts | TIMESTAMPTZ | Query timestamp |
+| query | TEXT | Raw user query |
+| translated_query | TEXT | Query after translation |
+| was_translated | BOOL | |
+| occupation_title | TEXT | Top result title |
+| nco_code | TEXT | Top result NCO code |
+| top_k | INT | Requested result count |
+| returned_count | INT | Actual result count |
+| client_ip | TEXT | |
+| geo_city | TEXT | From ip-api.com lookup |
+| geo_state | TEXT | Indian state name |
+| geo_country | TEXT | Country name |
+| raw | JSONB | Full result details |
+
+### `admin_users` — authentication
+| Column | Type | Notes |
+|---|---|---|
+| id | SERIAL PK | |
+| username | VARCHAR(64) UNIQUE | Always `"admin"` |
+| password_hash | TEXT | Werkzeug PBKDF2-SHA256 hash |
+| created_at | TIMESTAMPTZ | |
+
+### `admin_settings` — key-value config store (non-auth)
+| Column | Type |
+|---|---|
+| key | TEXT PK |
+| value | TEXT |
 
 ---
 
-## 15) Suggested Next Engineering Tasks
-1. Refactor `templates/admin/dashboard.html` JS into modular files.
-2. Add automated tests for admin API validations and duplicate handling.
-3. Move expensive rebuild operations to async/background jobs.
-4. Add role-based auth/session guard for `/admin` route.
-5. Add structured logging and health-check endpoint.
+## 5. Admin Authentication
+
+All authentication is stored in the `admin_users` PostgreSQL table. No `.env` variables or hardcoded passwords are used.
+
+### First-run bootstrap
+On startup, `_ensure_admin_account()` in `app.py` checks if `admin_users` is empty. If so:
+1. Generates a random password via `secrets.token_urlsafe(16)`
+2. Hashes it with `werkzeug.security.generate_password_hash` (PBKDF2-SHA256)
+3. Stores in `admin_users`
+4. Prints the plaintext password once to the server console — it is never stored or logged again
+
+### Login / logout
+- `GET /admin/login` — renders login page
+- `POST /admin/login` — verifies password, sets `session['admin_authenticated'] = True`
+- `GET /admin/logout` — clears session, redirects to login
+
+### Route protection
+Two decorators protect admin routes:
+- `@admin_required` — for HTML page routes: redirects to `/admin/login` if not authenticated
+- `@admin_api_required` — for `/admin/api/*` routes: returns `401 JSON` if not authenticated
+
+The admin dashboard JS has a global `fetch` interceptor that catches 401 responses and redirects to the login page automatically.
+
+### Password management
+Run from the project root:
+```bash
+python scripts/set_admin_password.py
+```
+Options:
+1. Change password (prompts for new password twice, minimum 8 chars)
+2. Reset (delete + recreate with a new random password printed to console)
+
+---
+
+## 6. Search Architecture
+
+### Module loading
+`utils/searchapp.py` is imported once at startup (`import utils.searchapp as search_module`). All data is loaded into RAM:
+- FAISS index (deserialized from `search_assets`)
+- Title FAISS index (built in-memory from occupation titles)
+- SBERT model
+- Metadata list
+- Graph network dict
+- Job details dict (descriptions, hierarchy)
+- Description word sets (pre-built for fast keyword matching)
+
+### Hybrid search algorithm (`utils/searchapp.py`)
+
+**Constants:**
+```
+ALPHA = 0.60    # semantic SBERT score weight
+BETA  = 0.25    # graph keyword coverage weight
+GAMMA = 0.15    # description keyword match weight
+CANDIDATE_K = 100
+TITLE_CANDIDATE_K = 100
+```
+
+**Step 1 — Substring title match**
+- Exact substring matches against occupation titles
+- Sorted: exact → starts-with → substring
+- If `len(matches) >= top_k`, return immediately (no SBERT needed)
+
+**Step 2 — Semantic search**
+1. `_preprocess_query(query)` strips first-person filler (`"I am a"`, `"I work as"`, `"My job is"`) to expose the core occupation concept
+2. `embed_query()` encodes with BGE instruction prefix; appends `" occupation"` for single-word queries
+3. FAISS search on full document index → semantic scores
+4. FAISS search on title index → title scores
+5. For each candidate:
+   - `compute_graph_score()` — fraction of **query** words (minus stopwords) covered by the occupation's keyword graph
+   - `compute_description_score()` — fraction of query words found in `occupation_description + family_description + group_description`
+   - `final_score = 0.65 × (ALPHA×semantic + BETA×graph + GAMMA×desc) + 0.35 × title_score`
+6. Sort by `final_score` descending
+7. Merge title matches + semantic candidates (deduplicated by NCO code)
+
+**Search result cache**
+- In-memory LRU-style cache keyed on `(translated_query, top_k, filters)`
+- TTL: 5 minutes, max 500 entries
+- Skips SBERT inference for repeated queries (saves 200–500ms)
+- History logging still runs on every request regardless of cache hit
+
+### NCO direct search mode
+`search_mode: "nco"` — exact/prefix match against NCO 2015 codes, no SBERT.
+
+### Reload after admin mutations
+`search_module.reload_from_db()` is called after every successful add/edit/delete to refresh all in-memory state from PostgreSQL.
+
+---
+
+## 7. IP Geolocation (`utils/ip_location.py`)
+
+Uses `ip-api.com` (free, 1000 req/min, no API key):
+- Private/loopback IPs (`127.0.0.1`, `192.168.x.x`, etc.) → `{"city": "", "state": "", "country": "India"}`
+- Public IPs → `{"city": "...", "state": "<Indian state>", "country": "India"}` or foreign country
+- Results cached in-memory per IP (no expiry, process lifetime)
+- Timeout: 1 second (never blocks a search if slow)
+
+Stored in `prompt_history.geo_state/geo_city/geo_country` after every search.
+
+---
+
+## 8. Translation and Language Handling
+
+`utils/translation_service.py`
+
+Flow:
+1. Detect language with `langdetect`
+2. If user explicitly selected a non-English language (`user_language` param), translate using `deep-translator`
+3. Translation notice included in API response if translation occurred
+
+Supported services: MyMemory → LibreTranslate (fallback)
+
+---
+
+## 9. Flask Routes
+
+### Public routes
+| Method | Route | Description |
+|---|---|---|
+| GET | `/` | Search page |
+| POST | `/api/search` | Semantic / NCO search |
+| POST | `/api/translate` | Explicit translation |
+| GET | `/api/languages` | Supported language map |
+| GET | `/favicon.ico` | Returns 204 (no content) |
+| GET | `/.well-known/appspecific/com.chrome.devtools.json` | Returns 204 (suppresses Chrome DevTools 404 noise) |
+
+### Admin UI routes (session-protected)
+| Method | Route | Description |
+|---|---|---|
+| GET | `/admin/login` | Login page |
+| POST | `/admin/login` | Authenticate |
+| GET | `/admin/logout` | Log out |
+| GET | `/admin` | Dashboard (3 tabs) |
+
+### Admin API routes (`@admin_api_required`)
+| Method | Route | Description |
+|---|---|---|
+| GET | `/admin/api/prompt-history` | Search history (`?limit=5000&occupation_title=`) |
+| GET | `/admin/api/occupations` | All occupations |
+| POST | `/admin/api/occupations` | Add occupation |
+| PUT | `/admin/api/occupations/<row_id>` | Edit occupation |
+| DELETE | `/admin/api/occupations/<row_id>` | Delete occupation |
+| POST | `/admin/api/import-csv` | Bulk import from CSV |
+| GET | `/admin/api/analytics/states` | Search count per Indian state |
+| GET | `/admin/api/analytics/states/<state_name>` | State drill-down (occupations + divisions) |
+| GET | `/admin/api/analytics/countries` | Search count per non-India country |
+| GET | `/admin/api/analytics/search-trend` | Daily search trend (last 7 days) |
+| GET | `/admin/api/analytics/top-queries` | Top 10 repeated queries |
+
+---
+
+## 10. Admin Dashboard (3 Tabs)
+
+### Analytics tab
+- Metric tiles: Total Searches, Unique Queries, Translation Rate, Active Occupations
+- Charts: Search Trend (7-day), Top Occupations, Translation Language Breakdown
+- Full search history table with location column (city + state from geolocation)
+- Auto-refresh every **5 minutes** (was 90 seconds — reduced for low-end systems)
+- Occupation filter dropdown in history table
+
+### Database Management tab
+- Paginated occupation table (40 per page) with search
+- Add / Edit / Delete with NCO format validation:
+  - NCO 2015: `XXXX.XXXX`
+  - NCO 2004: `XXXX.XX`
+- Password verified on every write operation
+- Cascading division → sub-division → group → family dropdowns
+- Import CSV bulk-load option
+- Export as CSV / Excel
+
+### State-wise Demand tab
+- Interactive India map (D3 v7 + GeoJSON from geohacker/india)
+- Heat map colored by search count per state (blue gradient)
+- Click any state to see: top 10 occupations, division breakdown chart
+- Metric strip: Total Searches (India), Active States, Top State, Top Occupation
+- **Only India searches shown** — non-India (VPN etc.) are filtered by `geo_country = 'India'`
+- International Searches box below the map: shows search counts per non-India country with progress bars
+- GeoJSON is cached in `window.__ncoIndiaGeoData` after first load (no re-fetch on tab switch)
+- Map works only with real public IPs in production; local `127.0.0.1` produces no geo data
+
+---
+
+## 11. Security
+
+| Feature | Implementation |
+|---|---|
+| Admin password | Werkzeug PBKDF2-SHA256, stored in PostgreSQL `admin_users`, never in `.env` or source |
+| Session auth | Flask server-side sessions with `SECRET_KEY` env var |
+| Password hashing | Timing-safe via `check_password_hash` (uses `hmac.compare_digest` internally) |
+| First-run seed | `secrets.token_urlsafe(16)` printed once to console |
+| Security headers | `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` |
+| Static asset caching | Versioned files served with `Cache-Control: public, max-age=31536000, immutable` |
+| No hardcoded passwords | No passwords in JS, templates, or `.env` |
+
+---
+
+## 12. Performance Optimizations
+
+### Backend
+- **Flask-Compress** — all text/JSON responses automatically gzip'd (~70–80% size reduction)
+- **Search result cache** — in-memory, 5-minute TTL, 500-entry max; skips SBERT for repeated queries
+- **FAISS in-memory** — zero DB hits per search after startup; only `prompt_history` insert per query
+- **ip-api.com in-memory cache** — one geolocation lookup per unique IP
+
+### Frontend (search page)
+- **AbortController** — cancels in-flight requests when user types faster; no stale-response overwrites
+- **Debounce: 400ms** — reduced from 250ms; fewer server hits while typing
+- **System font stack** — no Google Fonts CDN; text renders instantly on any network
+- **Paginated directory** — 40 rows rendered at a time, "Show More" on demand
+
+### Frontend (admin dashboard)
+- **Deferred scripts** — Bootstrap, Chart.js, D3 all load with `defer` (non-blocking)
+- **5-minute auto-refresh** — analytics polling reduced from 90s
+- **D3 path cache** — map SVG paths pre-computed once; hover/click don't re-project
+- **rAF-throttled tooltip** — map tooltip updates at most once per animation frame
+- **Chart.js in-place update** — existing chart instances updated via `.data =` + `.update()`, never recreated
+- **GeoJSON cache** — India GeoJSON fetched once, cached in `window.__ncoIndiaGeoData`
+
+---
+
+## 13. Search Accuracy Details
+
+### Graph score (fixed)
+Old formula divided by `len(keywords)` (occupation's keyword count, often 50+), making occupations with many keywords score near zero. Fixed to divide by `len(query_words)` — measures what fraction of the query is covered by the occupation.
+
+### Description score (new signal)
+After SBERT scoring, query words are matched against the pre-built word sets from `occupation_description + family_description + group_description`. Gives a lightweight keyword signal independent of SBERT embeddings.
+
+### Query preprocessing
+Strips first-person filler before embedding:
+- `"I am a farmer"` → embeds as `"farmer"`
+- `"I am a professor in a private college"` → `"professor in a private college"`
+- `"I grow banana trees"` → `"grow banana trees"` (action verbs kept)
+
+### Stopwords
+Common English words (`i`, `am`, `the`, `a`, `and`, etc.) are stripped from graph and description scoring to prevent false matches.
+
+---
+
+## 14. Scripts
+
+### `scripts/migrate_to_postgres.py`
+One-time import from CSV/JSON/SQLite into PostgreSQL. Also builds embeddings, FAISS index, and graph.
+```bash
+python scripts/migrate_to_postgres.py
+```
+
+### `scripts/set_admin_password.py`
+Interactive admin credential manager. Run from project root:
+```bash
+python scripts/set_admin_password.py
+```
+Options: change password | reset to new random password
+
+### `scripts/import_prompt_history.py`
+Replace the entire `prompt_history` table from a JSON backup file:
+```bash
+python scripts/import_prompt_history.py "path/to/prompt_history.json"
+```
+JSON format: array of objects with fields `ts`, `query`, `translated_query`, `was_translated`, `occupation_title`, `nco_code`, `client_ip`.
+
+---
+
+## 15. Local Setup
+
+```bash
+# 1. Create PostgreSQL database
+# 2. Create .env
+DATABASE_URL=postgresql://postgres:PASSWORD@localhost:5432/statathon_nco
+SECRET_KEY=your_random_secret_key
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run migration (first time only)
+python scripts/migrate_to_postgres.py
+
+# 5. Start server
+python app.py
+
+# 6. Open
+# http://127.0.0.1:5000/       — search page
+# http://127.0.0.1:5000/admin  — admin (password printed to console on first run)
+```
+
+---
+
+## 16. AWS Deployment Notes
+
+- The app auto-detects proxy IPs via `X-Forwarded-For` header for correct geolocation
+- `geo_state` will be blank for all local/dev traffic (`127.0.0.1`) — this is expected
+- State-wise map only shows data from production where users have real public IPs
+- `SECRET_KEY` env var must be set persistently in AWS so sessions survive restarts
+- `FLASK_DEBUG=0` must be set in production (debug defaults off unless env var is `1`/`true`)
+- `ASSET_VERSION` env var controls cache busting for static files
+
+See `docs/AWS_TROUBLESHOOTING_GUIDE.md` and `docs/GITHUB_AWS_WORKFLOW.md` for deployment details.
+
+---
+
+## 17. NCO Validation Rules
+
+| Field | Rule |
+|---|---|
+| NCO 2015 | Required, format `XXXX.XXXX` (4 digits, dot, 4 digits) |
+| NCO 2004 | Optional on add; format `XXXX.XX` (4 digits, dot, 2 digits) when provided |
+| Occupation Title | Required |
+| Division | Required |
+| Sub Division | Required |
+| Group | Required |
+| Family | Required |
+| Occupation Description | Required |
+
+Duplicate NCO 2015 and duplicate NCO 2004 (when provided) are both blocked at the DB level.
+
+---
+
+## 18. Known Limitations
+
+- **State map empty locally** — all searches from `127.0.0.1` store empty `geo_state`. Use the SQL snippet in the code review notes to backfill test data manually.
+- **GeoJSON state name matching** — `ip-api.com` returns `regionName` which must match the GeoJSON `NAME_1` field exactly. Post-2014 state splits (e.g. Telangana) may not match on older GeoJSON versions.
+- **SBERT inference latency** — ~100–500ms depending on server CPU. Cached for repeated queries. First cold query after cache expiry always pays the full cost.
+- **Admin sessions not shared** — Flask sessions are in-process memory. Multi-worker Gunicorn deployments need `SESSION_TYPE=sqlalchemy` or a Redis session store for session persistence across workers.
+- **No role separation** — single `admin` account only. No multi-user or role-based access.

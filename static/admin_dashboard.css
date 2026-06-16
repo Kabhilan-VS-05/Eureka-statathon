@@ -23,7 +23,7 @@
       }
 
       body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
         background: #f4f6f9;
         color: var(--dark-gray);
         line-height: 1.6;
@@ -1722,7 +1722,7 @@
           text-anchor: middle;
           pointer-events: none;
           user-select: none;
-          font-family: 'Inter', Arial, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
         }
 
         .nco-bubble-subtext {
@@ -1731,7 +1731,7 @@
           text-anchor: middle;
           pointer-events: none;
           user-select: none;
-          font-family: 'Inter', Arial, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
         }
 
         .nco-bubble-label {
@@ -2203,7 +2203,7 @@
     border-bottom-right-radius: 30px;
 }
 .loading-text {
-    font-family: 'Inter', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
     font-size: 1.1rem;
     font-weight: 600;
     color: #1a365d;

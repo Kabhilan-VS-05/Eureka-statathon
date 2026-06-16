@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>National Classification of Occupations</title>
+    <link rel="icon" type="image/svg+xml" href="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='gov-style.css') }}?v={{ asset_version }}"
@@ -12,13 +13,11 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+      /* System font stack — no external CDN needed, renders instantly on any device */
       /* ── Font & Base ───────────────────────────────────────────── */
       body, input, textarea, select, button {
-        font-family: 'Inter', Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
       }
 
       /* ── Hero Search Section ────────────────────────────────────── */
@@ -105,7 +104,7 @@
         border: none;
         background: transparent;
         font-size: 16px;
-        font-family: 'Inter', Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
         color: #1e293b;
         padding: 10px 0;
         resize: none;
@@ -129,7 +128,7 @@
         font-weight: 600;
         cursor: pointer;
         transition: background 0.2s;
-        font-family: 'Inter', Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
         flex-shrink: 0;
         white-space: nowrap;
         display: inline-flex;
@@ -187,7 +186,7 @@
         border-radius: 999px;
         padding: 6px 14px;
         font-size: 12.5px;
-        font-family: 'Inter', Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
         color: #374151;
         cursor: pointer;
         white-space: nowrap;
@@ -240,118 +239,132 @@
         flex-wrap: wrap;
       }
 
-      /* ── PIGS v2 Adaptive Banner ──────────────────────────── */
-      .pigs-banner {
-        margin-top: 14px;
-        border-radius: 10px;
-        padding: 13px 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        animation: pigsFadeIn 0.22s ease;
-        border-left: 4px solid transparent;
-        border: 1px solid transparent;
+      /* ── PIGS v5 — Lightbulb Hint System ──────────────────── */
+
+      /* Lightbulb button — sits beside the Search button */
+      .pigs-bulb-btn {
+        background: #f1f5f9;
+        border: 1.5px solid #d0d9e2;
+        cursor: pointer;
+        color: #94a3b8;
+        font-size: 16px;
+        padding: 0 14px;
+        border-radius: 2px;
+        flex-shrink: 0;
+        min-height: 52px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.18s, background 0.18s, border-color 0.18s;
+        box-sizing: border-box;
+      }
+      .pigs-bulb-btn.active {
+        color: #FF8C00;
+        background: #fff8f0;
+        border-color: #FF8C00;
+        animation: bulbPop 0.35s ease;
+      }
+      .pigs-bulb-btn:hover {
+        background: #fff8f0;
+        border-color: #FF8C00;
+        color: #E07800;
+      }
+      @keyframes bulbPop {
+        0%   { transform: scale(1);    }
+        40%  { transform: scale(1.18); }
+        70%  { transform: scale(0.95); }
+        100% { transform: scale(1);    }
+      }
+
+      /* PIGS hint panel */
+      .pigs-panel {
+        margin-top: 10px;
+        background: #fffdf5;
+        border: 1px solid #fde68a;
+        border-left: 4px solid #f59e0b;
+        border-radius: 8px;
+        padding: 12px 14px;
+        animation: pigsFadeIn 0.18s ease;
       }
       @keyframes pigsFadeIn {
         from { opacity: 0; transform: translateY(-4px); }
         to   { opacity: 1; transform: translateY(0); }
       }
-      /* State: GOOD_QUERY — soft green */
-      .pigs-banner.pigs-good {
-        background: #f0fdf4;
-        border-color: #bbf7d0;
-        border-left-color: #22c55e;
-      }
-      .pigs-banner.pigs-good .pigs-header { color: #166534; }
-      .pigs-banner.pigs-good .pigs-sub-tip { color: #15803d; }
-      /* State: GOOD_WITH_EXPLORATION — light blue */
-      .pigs-banner.pigs-explore {
-        background: #eff6ff;
-        border-color: #bfdbfe;
-        border-left-color: #3b82f6;
-      }
-      .pigs-banner.pigs-explore .pigs-header { color: #1e40af; }
-      .pigs-banner.pigs-explore .pigs-sub-tip { color: #1d4ed8; }
-      .pigs-banner.pigs-explore .pigs-chip {
-        border-color: #3b82f6;
-        color: #1e40af;
-      }
-      .pigs-banner.pigs-explore .pigs-chip:hover {
-        background: #3b82f6;
-        color: #ffffff;
-      }
-      /* State: NEEDS_GUIDANCE — warm amber */
-      .pigs-banner.pigs-guide {
-        background: #fffbeb;
-        border-color: #fde68a;
-        border-left-color: #f59e0b;
-      }
-      .pigs-banner.pigs-guide .pigs-header { color: #92400e; }
-      .pigs-banner.pigs-guide .pigs-sub-tip { color: #78350f; }
-      .pigs-banner.pigs-guide .pigs-chip {
-        border-color: #f59e0b;
-        color: #92400e;
-      }
-      .pigs-banner.pigs-guide .pigs-chip:hover {
-        background: #f59e0b;
-        color: #ffffff;
-      }
-      /* State: AMBIGUOUS — calm indigo */
-      .pigs-banner.pigs-ambiguous {
-        background: #eef2ff;
-        border-color: #c7d2fe;
-        border-left-color: #6366f1;
-      }
-      .pigs-banner.pigs-ambiguous .pigs-header { color: #3730a3; }
-      .pigs-banner.pigs-ambiguous .pigs-sub-tip { color: #4338ca; }
-      .pigs-banner.pigs-ambiguous .pigs-chip {
-        border-color: #6366f1;
-        color: #3730a3;
-      }
-      .pigs-banner.pigs-ambiguous .pigs-chip:hover {
-        background: #6366f1;
-        color: #ffffff;
-      }
-      .pigs-header {
+
+      .pigs-panel-header {
         display: flex;
         align-items: center;
         gap: 7px;
-        font-size: 13px;
+        margin-bottom: 10px;
+      }
+      .pigs-panel-icon {
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      #pigsPanelTip {
+        font-size: 12.5px;
         font-weight: 700;
+        color: #78350f;
+        flex: 1;
+        line-height: 1.3;
       }
-      .pigs-sub-tip {
-        font-size: 12.5px;
-        line-height: 1.5;
-        margin: 0;
-        opacity: 0.9;
-      }
-      .pigs-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 2px;
-      }
-      .pigs-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        background: #ffffff;
-        border: 1.5px solid currentColor;
-        border-radius: 20px;
-        padding: 5px 13px;
-        font-size: 12.5px;
-        font-weight: 600;
+      .pigs-panel-close {
+        background: none;
+        border: none;
         cursor: pointer;
-        transition: background 0.15s, color 0.15s, transform 0.12s;
-        user-select: none;
-        white-space: nowrap;
+        color: #b45309;
+        font-size: 12px;
+        padding: 2px 5px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        opacity: 0.6;
+        transition: opacity 0.15s;
       }
-      .pigs-chip:active { transform: translateY(0); }
-      .text-warning { color: #f59e0b; }
+      .pigs-panel-close:hover { opacity: 1; }
+
+      /* Prompt rows — one per natural language pattern */
+      .pigs-panel-list {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .pigs-prompt-btn {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        background: #ffffff;
+        border: 1px solid #fde68a;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 13px;
+        color: #374151;
+        cursor: pointer;
+        text-align: left;
+        font-family: inherit;
+        transition: background 0.13s, border-color 0.13s, color 0.13s;
+        line-height: 1.4;
+        width: 100%;
+      }
+      .pigs-prompt-btn:hover {
+        background: #fffbeb;
+        border-color: #f59e0b;
+        color: #78350f;
+      }
+      .pigs-prompt-btn .prompt-arrow {
+        color: #f59e0b;
+        font-size: 10px;
+        margin-top: 3px;
+        flex-shrink: 0;
+      }
+
+      /* Hide old banner — replaced by lightbulb UI */
+      #pigsGuidance { display: none !important; }
+
+      .text-warning { color: #d97706; }
 
       /* ── Results title font ──────────────────────────────────────── */
       .results-header h2 {
-        font-family: 'Inter', Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
         font-weight: 700;
       }
 
@@ -374,6 +387,7 @@
         .hero-search-row { flex-direction: column; gap: 8px; }
         .hero-search-input-wrap { border-radius: 12px; }
         #occupationSearch { font-size: 15px; }
+        #searchGhostText { font-size: 15px; }
         .hero-search-btn {
           width: 100%;
           border-radius: 12px;
@@ -692,6 +706,309 @@
       .hidden {
         display: none !important;
       }
+
+      /* ══════════════════════════════════════════════════════════════
+         INDIAN GOVERNMENT PORTAL — Search Area Theme
+         Palette: Navy #001845 | Saffron #FF8C00 | Green #138808 | White
+         Signature: Saffron CTA button on white card with tricolor cap
+      ══════════════════════════════════════════════════════════════ */
+
+      /* 1 ── Tricolor flag stripe across hero top */
+      .hero-tricolor-bar {
+        display: flex;
+        height: 8px;
+        width: calc(100% + 40px);
+        margin: 0 -20px;
+        flex-shrink: 0;
+      }
+      .hero-tricolor-bar::before,
+      .hero-tricolor-bar::after,
+      .hero-tricolor-bar span {
+        content: "";
+        flex: 1;
+        display: block;
+      }
+      .hero-tricolor-bar {
+        background: linear-gradient(
+          to right,
+          #FF8C00 0% 33.33%,
+          #f0f0f0 33.33% 66.66%,
+          #138808 66.66% 100%
+        );
+      }
+
+      /* 2 ── Hero section: deep ministerial navy */
+      .search-hero-section {
+        background: linear-gradient(135deg, #002855 0%, #003f7a 60%, #005096 100%) !important;
+        padding: 0 20px 44px !important;
+        margin: 0 -20px !important;
+        position: relative !important;
+      }
+
+      /* 3 ── Content wrapper below stripe */
+      .hero-inner-content {
+        padding-top: 30px;
+        overflow: visible !important;
+      }
+
+      /* 4 ── Government of India badge */
+      .hero-gov-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+      }
+      .hero-gov-badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 16px;
+        background: rgba(255, 140, 0, 0.10);
+        border: 1px solid rgba(255, 140, 0, 0.35);
+        color: #FFA733;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        border-radius: 2px;
+      }
+      .hero-gov-badge-pill i { font-size: 9px; }
+
+      /* 5 ── Title */
+      .hero-title {
+        font-size: 32px !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.3px !important;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35) !important;
+        margin-bottom: 8px !important;
+      }
+
+      .hero-subtitle {
+        font-size: 14px !important;
+        color: rgba(255,255,255,0.65) !important;
+        margin-bottom: 24px !important;
+      }
+
+      /* 6 ── Search card: white, saffron top cap, square corners */
+      .hero-search-card {
+        background: #ffffff !important;
+        border: none !important;
+        border-top: 5px solid #FF8C00 !important;
+        border-radius: 2px !important;
+        box-shadow: 0 16px 50px rgba(0, 0, 0, 0.28), 0 4px 12px rgba(0,0,0,0.15) !important;
+        padding: 22px 24px 20px !important;
+        overflow: visible !important;
+        max-width: 820px !important;
+      }
+
+      /* 7 ── Search input row */
+      .hero-search-input-wrap {
+        background: #FAFBFD !important;
+        border: 1.5px solid #C5D0DC !important;
+        border-radius: 2px !important;
+        min-height: 52px !important;
+        gap: 10px !important;
+        padding: 4px 14px !important;
+        transition: border-color 0.18s, box-shadow 0.18s !important;
+      }
+      .hero-search-input-wrap:focus-within {
+        border-color: #FF8C00 !important;
+        background: #ffffff !important;
+        box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.14) !important;
+      }
+      .hero-search-input-wrap:focus-within .search-icon {
+        color: #FF8C00 !important;
+      }
+      .hero-search-input-wrap .search-icon {
+        color: #8899AA !important;
+        font-size: 15px !important;
+        transition: color 0.18s !important;
+      }
+
+      #occupationSearch {
+        font-size: 15.5px !important;
+        color: #1A2B3C !important;
+      }
+      #searchGhostText {
+        font-size: 15.5px !important;
+      }
+
+      /* 8 ── Search button: SAFFRON — the signature element
+         India's first flag color, representing courage.
+         Stands apart from every generic-blue gov portal. */
+      .hero-search-btn {
+        background: #FF8C00 !important;
+        color: #001233 !important;
+        border-radius: 2px !important;
+        min-height: 52px !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.5px !important;
+        padding: 0 34px !important;
+        box-shadow: 0 3px 10px rgba(255, 140, 0, 0.35) !important;
+        transition: background 0.18s, box-shadow 0.18s, transform 0.15s !important;
+        text-transform: uppercase !important;
+        border: none !important;
+      }
+      .hero-search-btn:hover {
+        background: #E07800 !important;
+        box-shadow: 0 5px 16px rgba(255, 140, 0, 0.50) !important;
+        transform: translateY(-1px) !important;
+        color: #001233 !important;
+      }
+      .hero-search-btn:active {
+        transform: translateY(0) !important;
+        box-shadow: 0 2px 8px rgba(255, 140, 0, 0.30) !important;
+        background: #CC7000 !important;
+      }
+      .hero-search-btn i {
+        color: #001233 !important;
+      }
+
+      /* 9 ── Options row */
+      .hero-options-row {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 12px !important;
+        padding: 10px 0 12px !important;
+        margin-bottom: 12px !important;
+        border-bottom: 1px solid #EDF0F4 !important;
+        flex-wrap: wrap !important;
+      }
+
+      /* 10 ── Suggestion chips (more formal) */
+      .search-chip {
+        border-radius: 2px !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        padding: 5px 12px !important;
+        border-color: #CBD5DF !important;
+        background: #F4F6F9 !important;
+        color: #334A5E !important;
+      }
+      .search-chip:hover {
+        background: #001F5B !important;
+        border-color: #001F5B !important;
+        color: #ffffff !important;
+        transform: none !important;
+        box-shadow: none !important;
+      }
+
+      /* 11 ── Filter section */
+      .hierarchical-filters-section {
+        background: #F3F6FA !important;
+        border: 1px solid #D8E0EA !important;
+        border-radius: 2px !important;
+        padding: 12px 14px !important;
+        margin-bottom: 0 !important;
+        overflow: visible !important;
+      }
+
+      .filter-section-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        color: #7A8A9A;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 10px;
+      }
+      .filter-section-label i { font-size: 10px; }
+
+      /* 12 ── Dropdowns */
+      .filter-grid { overflow: visible !important; }
+
+      .custom-dropdown .dropdown-label {
+        font-size: 10px !important;
+        letter-spacing: 0.5px !important;
+        color: #5A6A7A !important;
+      }
+      .custom-dropdown .dropdown-trigger {
+        border: 1.5px solid #C8D4DE !important;
+        border-radius: 2px !important;
+        background: #ffffff !important;
+        min-height: 40px !important;
+        padding: 8px 10px !important;
+      }
+      .custom-dropdown .dropdown-trigger:hover {
+        border-color: #AABCCC !important;
+        background: #FAFBFD !important;
+      }
+      .custom-dropdown.open .dropdown-trigger {
+        border-color: #FF8C00 !important;
+        box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.15) !important;
+        background: #ffffff !important;
+      }
+      .custom-dropdown.open .trigger-arrow {
+        color: #FF8C00 !important;
+      }
+      .custom-dropdown .dropdown-menu {
+        border-radius: 2px !important;
+        border-color: #C8D4DE !important;
+        box-shadow: 0 8px 24px rgba(0, 30, 80, 0.14) !important;
+        z-index: 9999 !important;
+        /* Auto-widen to fit longest option text */
+        width: max-content !important;
+        min-width: 100% !important;
+        max-width: 320px !important;
+        left: 0 !important;
+        right: auto !important;
+      }
+
+      /* Show full option text — no truncation */
+      .custom-dropdown .dropdown-option-text {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        word-break: break-word !important;
+      }
+
+      /* Also widen the search input inside dropdown */
+      .custom-dropdown .dropdown-search-input {
+        white-space: normal !important;
+      }
+      .custom-dropdown .dropdown-option.selected {
+        color: #CC6600 !important;
+        background: #FFF5E6 !important;
+      }
+      .custom-dropdown .dropdown-option.selected .dropdown-option-checkbox {
+        background: #FF8C00 !important;
+        border-color: #FF8C00 !important;
+      }
+
+      /* Reset button */
+      .reset-filters-btn {
+        border-radius: 2px !important;
+        font-size: 12.5px !important;
+        border-color: #C8D4DE !important;
+        color: #334A5E !important;
+        height: 40px !important;
+      }
+      .reset-filters-btn:hover {
+        border-color: #FF8C00 !important;
+        color: #CC6600 !important;
+        background: #FFF8F0 !important;
+      }
+
+      /* 13 ── Mobile */
+      @media (max-width: 768px) {
+        .hero-tricolor-bar {
+          width: calc(100% + 24px);
+          margin: 0 -12px;
+        }
+        .search-hero-section {
+          padding: 0 12px 36px !important;
+          margin: 0 -12px !important;
+        }
+        .hero-title { font-size: 22px !important; }
+        .hero-search-btn {
+          font-size: 14px !important;
+          padding: 0 20px !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -742,6 +1059,9 @@
     </header>
         <!-- ═══════════════ HERO SEARCH SECTION ═══════════════ -->
         <div class="search-hero-section">
+          <!-- Indian flag tricolor accent -->
+          <span class="hero-tricolor-bar"></span>
+          <div class="hero-inner-content">
           <h2 class="hero-title">National Classification of Occupations</h2>
           <p class="hero-subtitle">Find any occupation by title, description, or natural language — in any Indian language</p>
 
@@ -757,7 +1077,7 @@
                     rows="1"
                     style="width: 100%; position: relative; z-index: 1; background: transparent;"
                   ></textarea>
-                  <div id="searchGhostText" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; font-size: 16px; font-family: 'Inter', Arial, sans-serif; line-height: 1.4; white-space: pre-wrap; overflow: hidden; padding: 10px 0; margin: 0; box-sizing: border-box; z-index: 2;"></div>
+                  <div id="searchGhostText" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; font-size: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.4; white-space: pre-wrap; overflow: hidden; padding: 10px 0; margin: 0; box-sizing: border-box; z-index: 2;"></div>
                 </div>
                 <!-- Ghost accept badge (shown when ghost suggestion active) -->
                 <div id="ghostAcceptBadge" class="ghost-accept-badge hidden">
@@ -789,9 +1109,25 @@
               <button id="applyBtn" class="hero-search-btn" type="submit">
                 <i class="fas fa-search" style="margin-right:6px;"></i>Search
               </button>
+              <!-- PIGS lightbulb — next to search button -->
+              <button id="pigsBulbBtn" class="pigs-bulb-btn hidden" title="Search examples" tabindex="-1">
+                <i class="fas fa-lightbulb"></i>
+              </button>
               <!-- Autocomplete dropdown anchored to search row -->
               <div id="autocompleteDropdown" class="autocomplete-dropdown hidden" style="position:absolute;top:100%;left:0;right:0;margin-top:4px;z-index:999;"></div>
             </div>
+            <!-- PIGS hint panel — toggled by lightbulb button -->
+            <div id="pigsPanel" class="pigs-panel hidden">
+              <div class="pigs-panel-header">
+                <span class="pigs-panel-icon">💡</span>
+                <span id="pigsPanelTip">Try describing the occupation in one of these ways:</span>
+                <button id="pigsPanelClose" class="pigs-panel-close" title="Close">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div id="pigsPanelList" class="pigs-panel-list"></div>
+            </div>
+
             <div id="ncoCodeInput" class="nco-code-input hidden" aria-label="NCO code input">
               <div class="nco-code-group">
                 <input class="nco-digit" type="text" inputmode="numeric" maxlength="1" aria-label="NCO digit 1" />
@@ -834,6 +1170,9 @@
 
             <!-- ── HIERARCHICAL FILTERS ROW ── -->
             <div class="hierarchical-filters-section" id="hierarchicalFiltersSection">
+              <div class="filter-section-label">
+                <i class="fas fa-filter"></i> Refine by Classification
+              </div>
               <div class="filter-grid">
                 <!-- Division Dropdown -->
                 <div class="custom-dropdown" id="dropdownDivision">
@@ -911,6 +1250,7 @@
 
 
           </div>
+          </div><!-- /hero-inner-content -->
         </div>
         <!-- ═══════════════════════════════════════════════════════ -->
 
@@ -989,7 +1329,35 @@
       const transcriptionPreview = document.getElementById(
         "transcriptionPreview"
       );
-      const pigsGuidance = document.getElementById("pigsGuidance");
+      const pigsGuidance  = document.getElementById("pigsGuidance"); // kept for legacy refs, hidden via CSS
+      const pigsBulbBtn   = document.getElementById("pigsBulbBtn");
+      const pigsPanel     = document.getElementById("pigsPanel");
+      const pigsPanelTip  = document.getElementById("pigsPanelTip");
+      const pigsPanelList = document.getElementById("pigsPanelList");
+
+      // Lightbulb toggle
+      pigsBulbBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        pigsPanel.classList.toggle("hidden");
+      });
+      document.getElementById("pigsPanelClose").addEventListener("click", () => {
+        pigsPanel.classList.add("hidden");
+      });
+      // Close panel when user clicks outside
+      document.addEventListener("click", (e) => {
+        if (!pigsPanel.classList.contains("hidden") &&
+            !pigsPanel.contains(e.target) &&
+            e.target !== pigsBulbBtn) {
+          pigsPanel.classList.add("hidden");
+        }
+      });
+
+      // Reset PIGS state (called on new search / clear)
+      function resetPigs() {
+        pigsBulbBtn.classList.remove("active");
+        pigsBulbBtn.classList.add("hidden");
+        pigsPanel.classList.add("hidden");
+      }
 
       let allResults = [];
       let displayedCount = 0;
@@ -1336,7 +1704,7 @@
         } else {
           // Server-side instant search for general query mode, debounced to 250ms
           if (val.trim().length >= 2) {
-            realtimeDebounceTimer = setTimeout(() => performSearch(false, true), 250);
+            realtimeDebounceTimer = setTimeout(() => performSearch(false, true), 400);
           } else if (val.trim().length === 0) {
             // If empty, reset to directory view
             realtimeDebounceTimer = setTimeout(() => loadDirectory(), 150);
@@ -1446,6 +1814,7 @@
       let currentQuery = "";
       let selectedLanguage = null;
       let searchMode = "general";
+      let _searchAbortController = null;
 
       function getTopK() {
         const value = Number.parseInt(topKSelect.value, 10);
@@ -1484,7 +1853,7 @@
         resultsTable.classList.add("directory-table");
         searchStatus.classList.remove("hidden");
         document.getElementById("translationNotice").classList.add("hidden");
-        pigsGuidance.classList.add("hidden");
+        resetPigs();
 
         showMoreBtn.classList.add("hidden");
 
@@ -1550,7 +1919,7 @@
           searchStatus.classList.add("hidden");
           document.getElementById("resultsContainer").classList.remove("hidden");
           document.getElementById("translationNotice").classList.add("hidden");
-          pigsGuidance.classList.add("hidden");
+          resetPigs();
 
           displayResults(false);
           return;
@@ -1570,7 +1939,7 @@
           searchStatus.classList.add("hidden");
           document.getElementById("resultsContainer").classList.remove("hidden");
           document.getElementById("translationNotice").classList.add("hidden");
-          pigsGuidance.classList.add("hidden");
+          resetPigs();
 
           displayResults(false);
           return;
@@ -1663,7 +2032,7 @@
         searchStatus.classList.add("hidden");
         document.getElementById("resultsContainer").classList.remove("hidden");
         document.getElementById("translationNotice").classList.add("hidden");
-        pigsGuidance.classList.add("hidden");
+        resetPigs();
         displayResults(false);
       }
 
@@ -1777,20 +2146,24 @@
         isRealtimeFiltered = false;
         resultsTable.classList.remove("directory-table");
 
+        // Cancel any in-flight request so stale responses don't overwrite fresh ones
+        if (_searchAbortController) _searchAbortController.abort();
+        _searchAbortController = new AbortController();
+        const _signal = _searchAbortController.signal;
+
         // Show status and hide results ONLY if not typing in realtime
         if (!isTyping) {
           searchStatus.classList.remove("hidden");
           document.getElementById("resultsContainer").classList.add("hidden");
           document.getElementById("translationNotice").classList.add("hidden");
           showMoreBtn.classList.add("hidden");
-          pigsGuidance.classList.add("hidden");
-
+          resetPigs();
         }
 
         try {
           const requestedTopK = getTopK();
           const selectedLang = languageSelect.value;
-          const data = await fetch(`/api/search?top_k=${requestedTopK}`, {
+          const res = await fetch(`/api/search?top_k=${requestedTopK}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1805,7 +2178,9 @@
                 family: Array.from(selectedFamilies)
               }
             }),
-          }).then((res) => res.json());
+            signal: _signal,
+          });
+          const data = await res.json();
 
           // Hide status and show results
           if (!isTyping) {
@@ -1835,70 +2210,44 @@
               .classList.remove("hidden");
           }
 
-          // --- PIGS v3: Specificity + Diversity ---
-          (function renderPigs(pigs) {
-            if (!pigs || !pigs.state) {
-              pigsGuidance.classList.add("hidden");
+          // --- PIGS v5: Lightbulb Hint Panel ---
+          (function renderPigsPanel(pigs) {
+            const prompts = pigs && pigs.prompts && pigs.prompts.length ? pigs.prompts : null;
+
+            if (!prompts) {
+              // No hints needed — hide bulb and close panel
+              pigsBulbBtn.classList.remove("active");
+              pigsBulbBtn.classList.add("hidden");
+              pigsPanel.classList.add("hidden");
               return;
             }
-            
-            const headerEl = document.querySelector("#pigsGuidance .pigs-header");
-            const subTipEl = document.getElementById("pigsSubTip");
-            const chipsContainer = document.getElementById("pigsChips");
 
-            // Reset
-            pigsGuidance.className = "pigs-banner";
+            // Activate lightbulb
+            pigsBulbBtn.classList.remove("hidden");
+            pigsBulbBtn.classList.add("active");
 
-            if (pigs.state === "FOCUSED") {
-              pigsGuidance.classList.add("pigs-explore"); // clean blue style
-              headerEl.style.display = "none";
-              subTipEl.style.display = "none";
-            } else {
-              // NEEDS_GUIDANCE
-              pigsGuidance.classList.add("pigs-guide"); // warm amber style
-              headerEl.style.display = "flex";
-              document.getElementById("pigsIcon").textContent = "💡";
-              document.getElementById("pigsTip").textContent = pigs.tip || "We found many different occupations.";
-              subTipEl.textContent = pigs.sub_tip || "";
-              subTipEl.style.display = pigs.sub_tip ? "block" : "none";
-            }
+            // Populate tip
+            pigsPanelTip.textContent = pigs.tip || "Try describing the occupation in one of these ways:";
 
-            chipsContainer.innerHTML = "";
-            if (pigs.examples && pigs.examples.length > 0) {
-              pigs.examples.forEach(example => {
-                const chip = document.createElement("button");
-                chip.className = "pigs-chip";
-                chip.innerHTML = `<i class="fas fa-search" style="font-size:10px;"></i> ${example}`;
-                chip.addEventListener("click", () => {
-                  occupationSearch.value = example;
-                  clearGhost();
-                  hideDropdown();
-                  autoExpand();
-                  performSearch(false);
-                });
-                chipsContainer.appendChild(chip);
+            // Build prompt buttons
+            pigsPanelList.innerHTML = "";
+            prompts.forEach(phrase => {
+              const btn = document.createElement("button");
+              btn.className = "pigs-prompt-btn";
+              btn.innerHTML = `<i class="fas fa-arrow-right prompt-arrow"></i><span>${phrase}</span>`;
+              btn.addEventListener("click", () => {
+                occupationSearch.value = phrase;
+                clearGhost();
+                hideDropdown();
+                autoExpand();
+                pigsPanel.classList.add("hidden");
+                performSearch(false);
               });
-              chipsContainer.style.display = "flex";
-            } else {
-              chipsContainer.style.display = "none";
-            }
-
-            // Hide entirely if it's FOCUSED but we have no chips to show
-            if (pigs.state === "FOCUSED" && (!pigs.examples || pigs.examples.length === 0)) {
-              pigsGuidance.classList.add("hidden");
-              return;
-            }
-
-            pigsGuidance.classList.remove("hidden");
+              pigsPanelList.appendChild(btn);
+            });
           })(data.pigs);
 
           let results = data.results || [];
-          if (searchMode !== "nco" && results.length > 0) {
-            const topScore = results[0].final_score || 0;
-            if (topScore < 0.60) {
-              results = [];
-            }
-          }
 
           if (results.length > 0) {
             allResults = applyHierarchicalFilters(results);
@@ -1911,6 +2260,7 @@
             displayResults(false);
           }
         } catch (error) {
+          if (error.name === "AbortError") return; // Request was cancelled — not an error
           console.error("Search error:", error);
           searchStatus.classList.add("hidden");
           document.getElementById("resultsContainer").classList.remove("hidden");

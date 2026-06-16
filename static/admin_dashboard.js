@@ -1,9 +1,22 @@
-// Global chart instances (charts removed from UI)
+// Redirect to login on any 401 from admin APIs
+      const _origFetch = window.fetch;
+      window.fetch = async function(...args) {
+        const response = await _origFetch(...args);
+        if (response.status === 401) {
+          const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+          if (url.includes('/admin/')) {
+            window.location.href = '/admin/login';
+          }
+        }
+        return response;
+      };
+
+      // Global chart instances (charts removed from UI)
       window.charts = {};
       let refreshInterval;
       window.analyticsLoading = false;
-      const ANALYTICS_REFRESH_MS = 90000;
-      const ANALYTICS_HISTORY_LIMIT = 500;
+      const ANALYTICS_REFRESH_MS = 300000; // 5 min — reduces server load on low-end deployments
+      const ANALYTICS_HISTORY_LIMIT = 5000;
       let occupationsLoadPromise = null;
 
       // Global variables
@@ -12,16 +25,6 @@
       let currentPage = 1;
       const recordsPerPage = 25;
 
-      // JavaScript is running
-      console.log("DEBUG: JavaScript loaded successfully!");
-      
-      // Update visible test
-      const jsStatus = document.getElementById("jsStatus");
-      if (jsStatus) {
-        jsStatus.textContent = "JAVASCRIPT LOADED!";
-        jsStatus.style.color = "green";
-      }
-      
       let currentHistoryOccupationTitle = "";
       let currentHistoryRows = [];
       let currentSearchTerm = "";
@@ -40,7 +43,6 @@
       // Initialize dashboard on page load
       let dashboardInitialized = false;
       document.addEventListener("DOMContentLoaded", function () {
-        console.log("DEBUG: DOMContentLoaded event fired");
         initializeDashboard();
       });
 
@@ -70,7 +72,6 @@
 
         refreshInterval = setInterval(() => {
           if (document.hidden) {
-            console.log("DEBUG: Tab is hidden, skipping auto-refresh");
             return;
           }
           const analyticsTab = document.getElementById('analytics-tab');
@@ -152,32 +153,21 @@
       }
 
       function updateStatistics() {
-        console.log("DEBUG: updateStatistics called with", occupations.length, "occupations");
-        
-        // Add null checks for elements that might not exist
         const totalOccupationsEl = document.getElementById("totalOccupations");
-        console.log("DEBUG: totalOccupations element found:", !!totalOccupationsEl);
         if (totalOccupationsEl) {
           totalOccupationsEl.textContent = occupations.length.toLocaleString();
-          console.log("DEBUG: Set totalOccupations to:", occupations.length);
         }
 
         const divisions = new Set(occupations.map((occ) => occ.division).filter((d) => d));
-        console.log("DEBUG: Found divisions:", Array.from(divisions));
         const totalDivisionsEl = document.getElementById("totalDivisions");
-        console.log("DEBUG: totalDivisions element found:", !!totalDivisionsEl);
         if (totalDivisionsEl) {
           totalDivisionsEl.textContent = divisions.size.toLocaleString();
-          console.log("DEBUG: Set totalDivisions to:", divisions.size);
         }
 
         const families = new Set(occupations.map((occ) => occ.family).filter((f) => f));
-        console.log("DEBUG: Found families count:", families.size);
         const totalFamiliesEl = document.getElementById("totalFamilies");
-        console.log("DEBUG: totalFamilies element found:", !!totalFamiliesEl);
         if (totalFamiliesEl) {
           totalFamiliesEl.textContent = families.size.toLocaleString();
-          console.log("DEBUG: Set totalFamilies to:", families.size);
         }
 
         // Calculate data completeness
@@ -205,8 +195,6 @@
         if (typeof Chart !== "undefined") {
           Chart.defaults.animation = false;
         }
-        console.log("DEBUG: initializeCharts called");
-        
         // 1. Search Volume Trend Chart
         const ctxVolume = document.getElementById('searchVolumeTrendChart');
         if (ctxVolume && !charts.searchVolumeTrendChart) {
@@ -389,7 +377,6 @@
           });
         }
 
-        console.log("DEBUG: All 6 charts initialized successfully");
       }
 
       function updateChartsData() {
@@ -482,8 +469,6 @@
 
         const topN = getAnalyticsTopN();
         const groupBy = document.getElementById("analyticsGroupBy")?.value || "day";
-
-        console.log("DEBUG: Updating charts with", filteredHistory.length, "filtered history entries");
 
         updateAnalyticsMetricTiles(filteredHistory);
 
@@ -1115,17 +1100,6 @@
         return String(code).trim().toLowerCase();
       }
 
-      function getAnalyticsEntryProperty(entry, propName) {
-        if (entry && entry[propName]) {
-          return entry[propName];
-        }
-        const code = normalizeCodeForCompare(entry.nco_code || "");
-        const matchedOccupation = occupations.find((occupation) =>
-          normalizeCodeForCompare(occupation.nco_code) === code
-        );
-        return matchedOccupation ? matchedOccupation[propName] : "";
-      }
-
       function isSuccessfulAnalyticsEntry(entry) {
         if (typeof entry.returned_count === "number") return entry.returned_count > 0;
         return Boolean(entry.occupation_title || entry.nco_code);
@@ -1372,14 +1346,14 @@
               <td>${escapeHtml(occupation.family || '—')}</td>
               <td>
                 <div class="action-buttons">
-                  <button type="button" class="action-btn edit" onclick="editOccupation(${occupation.row_id})" title="Edit">
-                    <i class="fas fa-edit"></i>
+                  <button type="button" class="action-btn edit" onclick="editOccupation(${occupation.row_id})" title="Edit" aria-label="Edit occupation">
+                    <i class="fas fa-edit" aria-hidden="true"></i>
                   </button>
-                  <button type="button" class="action-btn history" onclick="showPromptHistory(${occupation.row_id})" title="View History">
-                    <i class="fas fa-clock"></i>
+                  <button type="button" class="action-btn history" onclick="showPromptHistory(${occupation.row_id})" title="View History" aria-label="View search history">
+                    <i class="fas fa-clock" aria-hidden="true"></i>
                   </button>
-                  <button type="button" class="action-btn delete" onclick="deleteOccupation(${occupation.row_id})" title="Delete">
-                    <i class="fas fa-trash"></i>
+                  <button type="button" class="action-btn delete" onclick="deleteOccupation(${occupation.row_id})" title="Delete" aria-label="Delete occupation">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
                   </button>
                 </div>
               </td>
@@ -1716,6 +1690,7 @@
 
       function showAddModal() {
         document.getElementById("addForm").reset();
+        document.getElementById("addAdminPassword").value = "";
         populateDivisionDropdowns();
         document.getElementById("addSubDivision").innerHTML = '<option value="">Select Sub Division</option>';
         document.getElementById("addGroup").innerHTML = '<option value="">Select Group</option>';
@@ -1972,8 +1947,6 @@
       }
 
       async function loadAnalyticsData() {
-        console.log("DEBUG: loadAnalyticsData called");
-
         if (window.analyticsLoading) {
           return;
         }
@@ -1993,12 +1966,8 @@
           if (!Array.isArray(historyData)) {
             throw new Error("Invalid history data");
           }
-          console.log("DEBUG: Fetched", historyData.length, "history entries");
-
           updateSearchAnalyticsCharts(historyData);
           updateLastUpdateTime();
-
-          console.log("Analytics data loaded successfully");
         } catch (error) {
           console.error("Error loading analytics data:", error);
           showNotification("Failed to load analytics data", "error");
@@ -2035,8 +2004,6 @@
 
       // Tab switching functionality
       function switchTab(tabName, element) {
-        console.log('DEBUG: Switching to tab:', tabName);
-        
         // Hide all tabs
         document.querySelectorAll('.tab-content').forEach(tab => {
           tab.classList.remove('active');
@@ -2059,7 +2026,6 @@
         
         // Load data based on which tab is now active
         if (tabName === 'analytics-tab') {
-          console.log('DEBUG: Analytics tab activated - loading analytics data');
           loadAnalyticsData();
           startAnalyticsAutoRefresh();
         } else if (tabName === 'database-tab') {
@@ -2073,7 +2039,6 @@
             refreshInterval = null;
           }
         } else if (tabName === 'nco-analysis-tab') {
-          console.log('DEBUG: State-wise Demand tab activated');
           if (refreshInterval) {
             clearInterval(refreshInterval);
             refreshInterval = null;
@@ -2088,16 +2053,13 @@
           return;
         }
 
-        const password = prompt("Please enter admin password to confirm deletion:");
-        if (!password) return;
-
         showLoading();
         fetch(`/admin/api/occupations/${rowId}`, {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ admin_password: password }),
+          body: JSON.stringify({ admin_password: prompt("Enter admin password to confirm deletion:") || "" }),
         })
           .then((response) => response.json())
           .then((result) => {
@@ -2428,6 +2390,44 @@
       }
 
       // ----------------------------------------------------------
+      // _renderIntlBox — populate the international searches panel
+      // ----------------------------------------------------------
+      function _renderIntlBox(data) {
+        const list  = document.getElementById('intlCountryList');
+        const badge = document.getElementById('intlBadge');
+        if (!list || !badge) return;
+
+        const total = data.reduce((s, d) => s + d.count, 0);
+        badge.textContent = total > 0
+          ? total.toLocaleString() + ' search' + (total !== 1 ? 'es' : '')
+          : 'No data';
+
+        list.innerHTML = '';
+        if (!data.length) {
+          list.innerHTML = '<span style="font-size:12px;color:#94a3b8;">No searches from outside India yet.</span>';
+          return;
+        }
+
+        const max = data[0].count;
+        data.forEach(d => {
+          const pct = max ? Math.round(d.count / max * 100) : 0;
+          const tile = document.createElement('div');
+          tile.style.cssText =
+            'display:flex;flex-direction:column;gap:4px;background:#f8fafc;border:1px solid #e2e8f0;'
+            + 'border-radius:10px;padding:10px 14px;min-width:150px;flex:1;';
+          tile.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">'
+            + '<span style="font-size:13px;font-weight:600;color:#1e293b;">' + d.country + '</span>'
+            + '<span style="font-size:12px;font-weight:700;color:#6366f1;">' + d.count.toLocaleString() + '</span>'
+            + '</div>'
+            + '<div style="height:4px;background:#e2e8f0;border-radius:4px;">'
+            + '<div style="height:4px;width:' + pct + '%;background:#6366f1;border-radius:4px;"></div>'
+            + '</div>';
+          list.appendChild(tile);
+        });
+      }
+
+      // ----------------------------------------------------------
       // initIndiaMap
       // ----------------------------------------------------------
       async function initIndiaMap() {
@@ -2440,16 +2440,17 @@
             '<div style="color:#94a3b8;font-size:14px;"><i class="fas fa-spinner fa-spin"></i>\u00a0Loading map…</div>';
         }
 
-        // ── 1. Fetch state counts and GeoJSON in parallel ──────
+        // ── 1. Fetch state counts, GeoJSON, and international counts in parallel ──
         let stateData = [];
         let geoData;
 
         try {
-          const [statsRes, geoRes] = await Promise.all([
+          const [statsRes, geoRes, intlRes] = await Promise.all([
             fetch('/admin/api/analytics/states'),
             window.__ncoIndiaGeoData
               ? Promise.resolve(null)   // skip network if already cached
-              : fetch('https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson')
+              : fetch('https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson'),
+            fetch('/admin/api/analytics/countries')
           ]);
 
           stateData = await statsRes.json();
@@ -2461,6 +2462,10 @@
           } else {
             geoData = window.__ncoIndiaGeoData;
           }
+
+          const intlData = await intlRes.json();
+          _renderIntlBox(Array.isArray(intlData) ? intlData : []);
+
         } catch (e) {
           console.error('India map fetch error:', e);
           container.innerHTML =

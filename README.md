@@ -19,11 +19,13 @@ The application has two major surfaces:
 
 ## Quick Start
 1. Create a PostgreSQL database, for example `statathon_nco`.
-2. Create a `.env` file in the project root with your database credentials:
+2. Create a `.env` file in the project root with your database credentials and admin password:
    ```env
    DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/statathon_nco
+   ADMIN_PASSWORD=your_secure_admin_password
+   SECRET_KEY=your_random_secret_key
    ```
-   > **Note:** The `.env` file is git-ignored and never committed. Do not use `set` or `$env:` — the app loads credentials automatically via `python-dotenv`.
+   > **Note:** The `.env` file is git-ignored and never committed. `ADMIN_PASSWORD` is hashed with PBKDF2-SHA256 and stored in PostgreSQL on first startup — the plaintext is never persisted. Do not use `set` or `$env:` — the app loads credentials automatically via `python-dotenv`.
 3. Install dependencies:
    ```bash
    pip install -r requirements.txt

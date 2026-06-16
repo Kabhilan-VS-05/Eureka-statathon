@@ -1,15 +1,20 @@
 from dotenv import load_dotenv
 load_dotenv()  # Load .env before anything else (must be first)
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
+from flask_compress import Compress
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 import sys
 import os
 import json
+import threading
+import time
+import hashlib
 from datetime import datetime, timezone
 import csv
 import re
-import hashlib
 import secrets
 import io
 
@@ -38,15 +43,46 @@ if os.path.exists(_root_csv):
 # Load search module once at startup for performance
 import utils.searchapp as search_module
 
-# Import dynamic prompt generation system and PIGS
-from utils.dynamic_prompts import generate_dynamic_prompts, pigs_v2_analyze, pigs_analyze_prompt
+# Import PIGS — NCO-aware query guidance system
+from utils.dynamic_prompts import pigs_v2_analyze
 # Import translation service
 from utils.translation_service import translation_service
 # Import IP geolocation utility
 from utils.ip_location import resolve_ip_location
 
 app = Flask(__name__)
-CORS(app)  # Enable Cross-Origin Resource Sharing globally
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(32))
+CORS(app)
+Compress(app)   # gzip all text/json responses automatically
+
+# ------------------------------------------------------------------
+# In-memory search result cache
+# Keyed on (translated_query, top_k, filters) — avoids re-running
+# SBERT for identical queries within the TTL window.
+# ------------------------------------------------------------------
+_search_cache: dict = {}
+_search_cache_lock = threading.Lock()
+_SEARCH_CACHE_TTL  = 300   # seconds (5 min)
+_SEARCH_CACHE_MAX  = 500   # max entries
+
+def _search_cache_key(query: str, top_k: int, filters: dict) -> str:
+    raw = f"{query.lower().strip()}|{top_k}|{json.dumps(filters or {}, sort_keys=True)}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+def _get_cached_search(key: str):
+    with _search_cache_lock:
+        entry = _search_cache.get(key)
+        if entry and (time.monotonic() - entry["ts"]) < _SEARCH_CACHE_TTL:
+            return entry["data"]
+    return None
+
+def _set_cached_search(key: str, data: list):
+    with _search_cache_lock:
+        if len(_search_cache) >= _SEARCH_CACHE_MAX:
+            oldest = min(_search_cache, key=lambda k: _search_cache[k]["ts"])
+            del _search_cache[oldest]
+        _search_cache[key] = {"ts": time.monotonic(), "data": data}
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'nco_dataset_v6_final.csv')
 ASSET_VERSION = os.getenv("ASSET_VERSION", "8")
@@ -60,9 +96,29 @@ def inject_asset_version():
 
 @app.after_request
 def add_performance_headers(response):
+    # Security headers
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.pop("X-XSS-Protection", None)
+
+    # Cache static assets — versioned files get immutable/1-year, others use configured TTL
     if request.path.startswith("/static/"):
-        response.headers["Cache-Control"] = f"public, max-age={STATIC_CACHE_SECONDS}"
+        if request.args.get("v"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = f"public, max-age={STATIC_CACHE_SECONDS}"
     return response
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
+
+
+@app.route('/.well-known/appspecific/com.chrome.devtools.json')
+def chrome_devtools_json():
+    """Suppress Chrome DevTools discovery probe — harmless 204 instead of noisy 404."""
+    return '', 204
 
 
 def _get_admin_setting(key):
@@ -73,38 +129,77 @@ def _set_admin_setting(key, value):
     db_store.set_admin_setting(key, value)
 
 
-def _hash_password(password, salt=None):
-    if salt is None:
-        salt = secrets.token_hex(16)
-    pwd = password.encode("utf-8")
-    salt_bytes = salt.encode("utf-8")
-    digest = hashlib.pbkdf2_hmac("sha256", pwd, salt_bytes, 200_000).hex()
-    return f"{salt}${digest}"
+_ADMIN_USERNAME = "admin"
 
 
-def _verify_password(password, stored):
-    try:
-        salt, digest = stored.split("$", 1)
-    except ValueError:
+def _hash_password(password: str) -> str:
+    """Hash a password using Werkzeug PBKDF2-SHA256. Never log the return value."""
+    return generate_password_hash(password)
+
+
+def _verify_password(password: str, stored_hash: str) -> bool:
+    """
+    Timing-safe password verification via Werkzeug.
+    check_password_hash uses hmac.compare_digest internally.
+    """
+    if not stored_hash:
         return False
-    candidate = _hash_password(password, salt)
-    return secrets.compare_digest(candidate, stored)
+    return check_password_hash(stored_hash, password)
 
 
-def _require_admin_password(password):
+def _require_admin_password(password: str):
+    """
+    Fetch the hash for the single admin account from admin_users and verify.
+    Returns (True, None) on success, (False, error_message) on failure.
+    """
     if not password or not str(password).strip():
         return False, "Password is required"
-
-    stored = _get_admin_setting("admin_password_hash")
+    stored = db_store.get_admin_password_hash(_ADMIN_USERNAME)
     if not stored:
-        # First-time setup: store password and lock it.
-        _set_admin_setting("admin_password_hash", _hash_password(password))
-        return True, None
-
+        return False, "Admin account not found"
     if _verify_password(password, stored):
         return True, None
-
     return False, "Invalid password"
+
+
+def _ensure_admin_account():
+    """
+    Guarantee exactly one admin account exists in admin_users.
+    If the table is empty (first deploy), a cryptographically random password
+    is generated, its hash stored in PostgreSQL, and the plaintext printed
+    ONCE to stdout so the operator can capture it.
+    No password is ever written to source code, config files, or env vars.
+    """
+    if db_store.admin_user_exists():
+        return
+    raw_password = secrets.token_urlsafe(16)
+    db_store.create_admin_user(_ADMIN_USERNAME, _hash_password(raw_password))
+    print("\n" + "=" * 62)
+    print("  ADMIN ACCOUNT CREATED (first-run setup)")
+    print(f"  Username : {_ADMIN_USERNAME}")
+    print(f"  Password : {raw_password}")
+    print("  Save this password — it will NOT be shown again.")
+    print("=" * 62 + "\n")
+
+_ensure_admin_account()
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("admin_authenticated"):
+            return redirect(url_for("admin_login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_api_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("admin_authenticated"):
+            return jsonify({"error": "Authentication required", "redirect": "/admin/login"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 
 def _read_prompt_history():
@@ -339,7 +434,27 @@ def _search_by_nco_code(nco_query):
 def index():
     return render_template('index.html')
 
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if session.get("admin_authenticated"):
+        return redirect(url_for("admin_dashboard"))
+    error = None
+    if request.method == 'POST':
+        password = request.form.get('password', '').strip()
+        ok, err = _require_admin_password(password)
+        if ok:
+            session['admin_authenticated'] = True
+            return redirect(url_for("admin_dashboard"))
+        error = "Invalid password. Please try again."
+    return render_template('admin/login.html', error=error)
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin_authenticated', None)
+    return redirect(url_for("admin_login"))
+
 @app.route('/admin')
+@admin_required
 def admin_dashboard():
     return render_template('admin/dashboard.html')
 
@@ -402,8 +517,12 @@ def search_jobs():
                 except Exception as ex:
                     print(f"Translation failed: {ex}")
             
-            # Use the search function for specific queries
-            results = search_module.search(translated_query, top_k=top_k, filters=filters)
+            # Use the search function — cached to avoid re-running SBERT
+            _ck = _search_cache_key(translated_query, top_k, filters)
+            results = _get_cached_search(_ck)
+            if results is None:
+                results = search_module.search(translated_query, top_k=top_k, filters=filters)
+                _set_cached_search(_ck, results)
             for r in results:
                 if "nco_code" in r:
                     r["nco_code"] = _normalize_nco_code(r.get("nco_code"))
@@ -534,6 +653,7 @@ def get_supported_languages():
 
 
 @app.route('/admin/api/prompt-history', methods=['GET'])
+@admin_api_required
 def get_prompt_history():
     try:
         occupation_title = request.args.get('occupation_title', '').strip()
@@ -549,6 +669,7 @@ def get_prompt_history():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/admin/api/occupations', methods=['GET'])
+@admin_api_required
 def get_occupations():
     try:
         fieldnames, rows = _load_csv_rows()
@@ -576,6 +697,7 @@ def get_occupations():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/admin/api/occupations/<int:row_id>', methods=['PUT'])
+@admin_api_required
 def update_occupation(row_id):
     try:
         data = request.get_json()
@@ -661,6 +783,7 @@ def update_occupation(row_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/admin/api/occupations', methods=['POST'])
+@admin_api_required
 def add_occupation():
     try:
         data = request.get_json()
@@ -739,6 +862,7 @@ def add_occupation():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/admin/api/occupations/<int:row_id>', methods=['DELETE'])
+@admin_api_required
 def delete_occupation(row_id):
     try:
         data = request.get_json(silent=True) or {}
@@ -761,6 +885,7 @@ def delete_occupation(row_id):
 
 # Analytics API endpoints
 @app.route('/admin/api/analytics/divisions')
+@admin_api_required
 def analytics_divisions():
     try:
         fieldnames, rows = _load_csv_rows()
@@ -782,6 +907,7 @@ def analytics_divisions():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/admin/api/analytics/confidence')
+@admin_api_required
 def analytics_confidence():
     try:
         history = db_store.read_prompt_history(limit=5000)
@@ -804,6 +930,7 @@ def analytics_confidence():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/admin/api/analytics/top-occupations')
+@admin_api_required
 def analytics_top_occupations():
     try:
         history = db_store.read_prompt_history(limit=5000)
@@ -824,6 +951,7 @@ def analytics_top_occupations():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/admin/api/analytics/search-trend')
+@admin_api_required
 def analytics_search_trend():
     try:
         history = db_store.read_prompt_history(limit=5000)
@@ -860,6 +988,7 @@ def analytics_search_trend():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/admin/api/analytics/languages')
+@admin_api_required
 def analytics_languages():
     try:
         history = db_store.read_prompt_history(limit=5000)
@@ -884,6 +1013,7 @@ def analytics_languages():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/admin/api/analytics/low-confidence')
+@admin_api_required
 def analytics_low_confidence():
     try:
         history = db_store.read_prompt_history(limit=5000)
@@ -926,6 +1056,7 @@ def analytics_low_confidence():
 
 
 @app.route('/admin/api/analytics/states')
+@admin_api_required
 def analytics_states():
     """Return aggregated search counts per Indian state for the India map."""
     try:
@@ -936,6 +1067,7 @@ def analytics_states():
 
 
 @app.route('/admin/api/analytics/states/<state_name>')
+@admin_api_required
 def analytics_state_detail(state_name):
     """Return top occupations and division breakdown for a specific state."""
     try:
@@ -943,6 +1075,17 @@ def analytics_state_detail(state_name):
         return jsonify(stats)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/api/analytics/countries')
+@admin_api_required
+def analytics_countries():
+    """Return search counts per country, excluding India."""
+    try:
+        stats = db_store.get_international_search_stats()
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     debug_mode = os.getenv("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")

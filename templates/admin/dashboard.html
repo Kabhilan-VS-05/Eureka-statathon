@@ -4,14 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NCO Analytics Dashboard | Directorate General of Employment</title>
-    
+    <link rel="icon" type="image/svg+xml" href="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" />
     <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <!-- FontAwesome 6.4 Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <!-- System font stack — no external font CDN -->
     
     <link rel="stylesheet" href="{{ url_for('static', filename='admin_dashboard.css') }}?v={{ asset_version }}">
   </head>
@@ -64,6 +62,11 @@
         <ul class="nav-list">
           <li><a href="/">Home</a></li>
           <li><a href="/admin" class="active">Admin Dashboard</a></li>
+          <li style="margin-left:auto;">
+            <a href="/admin/logout" style="display:flex;align-items:center;gap:6px;color:#ffcccc;font-weight:600;">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+          </li>
         </ul>
       </nav>
     </header>
@@ -126,7 +129,7 @@
                     <i class="fas fa-undo"></i> Reset
                   </button>
                 </div>
-                <button class="sidebar-toggle-close" onclick="toggleAnalyticsSidebar()" title="Hide Filters">
+                <button class="sidebar-toggle-close" onclick="toggleAnalyticsSidebar()" title="Hide Filters" aria-label="Hide Filters">
                   <i class="fas fa-chevron-left"></i>
                 </button>
               </div>
@@ -372,6 +375,21 @@
             </div>
           </div>
         </div>
+
+        <!-- International Searches Box -->
+        <div style="padding:0 20px 20px;">
+          <div style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);padding:18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="font-size:13px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">
+                <i class="fas fa-globe" style="color:#6366f1;margin-right:6px;"></i> International Searches
+              </div>
+              <span id="intlBadge" style="background:#f1f5f9;color:#64748b;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;">—</span>
+            </div>
+            <div id="intlCountryList" style="display:flex;flex-wrap:wrap;gap:10px;">
+              <span style="font-size:12px;color:#94a3b8;">Loading…</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Database Management Tab -->
@@ -480,7 +498,7 @@
             <h5 class="modal-title">
               <i class="fas fa-edit"></i> Edit Occupation
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <form id="editForm">
@@ -584,7 +602,7 @@
             <h5 class="modal-title">
               <i class="fas fa-plus"></i> Add New Occupation
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <form id="addForm">
@@ -676,7 +694,7 @@
             <h5 class="modal-title">
               <i class="fas fa-clock"></i> Search History
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="mb-3">

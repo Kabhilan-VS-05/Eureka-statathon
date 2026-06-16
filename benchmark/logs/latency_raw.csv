@@ -1,0 +1,102 @@
+Type,Query,Latency_ms,StatusCode
+Cold_Start,Nurse,56.19820000003983,200
+Benchmark,Electrician,78.1418000000258,200
+Benchmark,Designer,76.56500000001643,200
+Benchmark,Teacher,83.34160000003976,200
+Benchmark,Teacher,78.0210000000352,200
+Benchmark,Teacher,78.46979999999348,200
+Benchmark,Chef,80.15080000001262,200
+Benchmark,Nurse,38.35709999998471,200
+Benchmark,Designer,81.30269999998063,200
+Benchmark,Pilot,37.65150000003814,200
+Benchmark,Software Engineer,90.95220000000381,200
+Benchmark,Electrician,85.97530000002962,200
+Benchmark,Plumber,40.737700000022414,200
+Benchmark,Software Engineer,95.63020000001643,200
+Benchmark,Software Engineer,91.15409999998292,200
+Benchmark,Data Scientist,111.486100000036,200
+Benchmark,Data Scientist,90.3229000000465,200
+Benchmark,Nurse,40.10440000001836,200
+Benchmark,Mechanic,80.94929999998612,200
+Benchmark,Teacher,80.6039999999939,200
+Benchmark,Mechanic,78.21619999998575,200
+Benchmark,Plumber,42.6274999999805,200
+Benchmark,Designer,82.81449999998358,200
+Benchmark,Electrician,92.68259999998918,200
+Benchmark,Chef,77.72180000000617,200
+Benchmark,Mechanic,81.10790000000634,200
+Benchmark,Electrician,87.466500000005,200
+Benchmark,Electrician,81.26300000003539,200
+Benchmark,Nurse,39.023600000007264,200
+Benchmark,Data Scientist,79.71580000003087,200
+Benchmark,Data Scientist,79.48740000000498,200
+Benchmark,Chef,72.8919000000019,200
+Benchmark,Mechanic,81.32779999999684,200
+Benchmark,Electrician,89.25960000004807,200
+Benchmark,Data Scientist,83.309799999995,200
+Benchmark,Teacher,76.83259999998882,200
+Benchmark,Electrician,82.5196000000119,200
+Benchmark,Data Scientist,81.23839999996108,200
+Benchmark,Designer,78.95279999996774,200
+Benchmark,Plumber,39.002799999991566,200
+Benchmark,Nurse,38.19159999994781,200
+Benchmark,Data Scientist,75.8967000000439,200
+Benchmark,Designer,78.23569999999336,200
+Benchmark,Plumber,39.305899999988014,200
+Benchmark,Software Engineer,79.90160000002788,200
+Benchmark,Software Engineer,83.3796999999663,200
+Benchmark,Chef,76.25489999998081,200
+Benchmark,Mechanic,79.2589999999791,200
+Benchmark,Designer,78.93689999997378,200
+Benchmark,Software Engineer,85.24209999995946,200
+Benchmark,Teacher,78.27940000004219,200
+Benchmark,Software Engineer,81.60820000000513,200
+Benchmark,Teacher,80.25539999999864,200
+Benchmark,Data Scientist,81.91540000001396,200
+Benchmark,Plumber,39.33770000003278,200
+Benchmark,Designer,76.76180000004251,200
+Benchmark,Electrician,81.46529999999075,200
+Benchmark,Data Scientist,95.264200000031,200
+Benchmark,Designer,76.45310000003747,200
+Benchmark,Electrician,78.35819999996829,200
+Benchmark,Pilot,37.86809999996876,200
+Benchmark,Data Scientist,80.66339999999173,200
+Benchmark,Designer,77.36149999999498,200
+Benchmark,Mechanic,75.58979999998883,200
+Benchmark,Pilot,39.575799999965966,200
+Benchmark,Chef,76.88389999998435,200
+Benchmark,Chef,73.98110000002589,200
+Benchmark,Teacher,82.16989999999669,200
+Benchmark,Data Scientist,84.49980000000323,200
+Benchmark,Chef,76.68019999999842,200
+Benchmark,Teacher,86.06220000001485,200
+Benchmark,Teacher,77.61770000001889,200
+Benchmark,Data Scientist,86.91299999998137,200
+Benchmark,Pilot,37.18569999995225,200
+Benchmark,Nurse,37.51539999996112,200
+Benchmark,Mechanic,72.64290000000528,200
+Benchmark,Data Scientist,77.82730000002402,200
+Benchmark,Mechanic,74.43979999999328,200
+Benchmark,Software Engineer,86.87639999999419,200
+Benchmark,Mechanic,77.92729999999892,200
+Benchmark,Nurse,37.352700000042205,200
+Benchmark,Electrician,83.56660000004013,200
+Benchmark,Chef,75.73589999998376,200
+Benchmark,Teacher,76.92990000003874,200
+Benchmark,Mechanic,83.69669999996177,200
+Benchmark,Electrician,80.69619999997713,200
+Benchmark,Plumber,38.92289999998866,200
+Benchmark,Nurse,38.8557999999648,200
+Benchmark,Data Scientist,77.51510000002781,200
+Benchmark,Chef,73.1738000000064,200
+Benchmark,Mechanic,83.57689999996865,200
+Benchmark,Electrician,82.10430000002589,200
+Benchmark,Electrician,81.61250000000564,200
+Benchmark,Data Scientist,84.27000000000362,200
+Benchmark,Electrician,80.30480000002171,200
+Benchmark,Electrician,81.9222999999738,200
+Benchmark,Pilot,37.808200000029046,200
+Benchmark,Electrician,93.06259999999611,200
+Benchmark,Plumber,37.7702000000113,200
+Benchmark,Teacher,75.98279999996294,200
+Benchmark,Teacher,73.7634999999841,200

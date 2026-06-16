@@ -1,0 +1,6 @@
+requests>=2.25.1
+psutil>=5.8.0
+matplotlib>=3.3.4
+numpy>=1.19.5
+playwright>=1.15.0
+psycopg2-binary>=2.8.6

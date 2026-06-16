@@ -126,6 +126,13 @@ def init_db():
                     content_type TEXT NOT NULL,
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 );
+
+                CREATE TABLE IF NOT EXISTS admin_users (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(64) NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
                 """
             )
 
@@ -211,6 +218,41 @@ def set_admin_setting(key, value):
                 """,
                 (key, value),
             )
+
+
+# ── Admin user helpers (admin_users table) ────────────────────────────────────
+
+def admin_user_exists():
+    """Return True if at least one row exists in admin_users."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM admin_users LIMIT 1")
+            return cur.fetchone() is not None
+
+
+def get_admin_password_hash(username: str):
+    """Return the stored password hash for *username*, or None if not found."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT password_hash FROM admin_users WHERE username = %s",
+                (username,),
+            )
+            row = cur.fetchone()
+            return row[0] if row else None
+
+
+def create_admin_user(username: str, password_hash: str):
+    """Insert a new admin user.  Raises IntegrityError if username already exists."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO admin_users (username, password_hash) VALUES (%s, %s)",
+                (username, password_hash),
+            )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def list_occupations():
@@ -622,11 +664,29 @@ def get_state_search_stats():
                 SELECT geo_state, COUNT(*) AS search_count
                 FROM prompt_history
                 WHERE geo_state IS NOT NULL AND geo_state <> ''
+                  AND geo_country = 'India'
                 GROUP BY geo_state
                 ORDER BY search_count DESC
                 """
             )
             return [{"state": row["geo_state"], "count": row["search_count"]} for row in cur.fetchall()]
+
+
+def get_international_search_stats():
+    """Return search counts grouped by country, excluding India."""
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT geo_country, COUNT(*) AS search_count
+                FROM prompt_history
+                WHERE geo_country IS NOT NULL AND geo_country <> ''
+                  AND geo_country <> 'India'
+                GROUP BY geo_country
+                ORDER BY search_count DESC
+                """
+            )
+            return [{"country": row["geo_country"], "count": row["search_count"]} for row in cur.fetchall()]
 
 
 def get_state_occupation_stats(state_name):
@@ -635,7 +695,7 @@ def get_state_occupation_stats(state_name):
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             # Total searches for this state
             cur.execute(
-                "SELECT COUNT(*) AS total FROM prompt_history WHERE geo_state = %s",
+                "SELECT COUNT(*) AS total FROM prompt_history WHERE geo_state = %s AND geo_country = 'India'",
                 (state_name,)
             )
             total_row = cur.fetchone()
@@ -646,7 +706,7 @@ def get_state_occupation_stats(state_name):
                 """
                 SELECT occupation_title, COUNT(*) AS cnt
                 FROM prompt_history
-                WHERE geo_state = %s AND occupation_title IS NOT NULL AND occupation_title <> ''
+                WHERE geo_state = %s AND geo_country = 'India' AND occupation_title IS NOT NULL AND occupation_title <> ''
                 GROUP BY occupation_title
                 ORDER BY cnt DESC
                 LIMIT 10
@@ -669,7 +729,7 @@ def get_state_occupation_stats(state_name):
                 SELECT o.division, COUNT(*) AS cnt
                 FROM prompt_history ph
                 LEFT JOIN occupations o ON ph.occupation_title = o.occupation_title
-                WHERE ph.geo_state = %s
+                WHERE ph.geo_state = %s AND ph.geo_country = 'India'
                   AND o.division IS NOT NULL AND o.division <> ''
                 GROUP BY o.division
                 ORDER BY cnt DESC
