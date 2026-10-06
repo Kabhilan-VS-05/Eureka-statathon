@@ -1,75 +1,47 @@
-# Eureka Statathon — Intelligent Multilingual Search & Analytics Engine
+# README.md
 
-**Eureka Statathon** is an AI-enhanced enterprise search, query expansion, and analytical knowledge platform designed for public statistical datasets, government documentation, and multi-lingual citizen inquiries. It integrates phonetic transliteration, domain-specific spelling corrections, Out-Of-Vocabulary (OOV) resolution, and comprehensive administrative analytics.
+## Introduction
+This project is a Flask-based AI semantic search system for the **National Classification of Occupations (NCO)**. It helps users find the right NCO occupation/code from natural-language queries and supports multilingual input with translation.
 
----
+The application has two major surfaces:
+- **Public Search UI** (`/`): semantic search, NCO-code search mode, translation-aware querying, and guided prompt suggestions.
+- **Admin Dashboard** (`/admin`): real-time analytics and controlled occupation database management (add/edit/delete with password protection and strict NCO validation).
 
-## 🌟 Key Architecture & Capabilities
+## Key Features
+- Hybrid semantic retrieval (SBERT + FAISS + graph keyword signals)
+- NCO code normalization and direct lookup mode
+- Prompt Intelligence (PIGS) suggestions for better query quality
+- Multi-language query handling with ambiguity prompts
+- Admin CRUD with strict format/duplicate validations:
+  - NCO 2015: `XXXX.XXXX`
+  - NCO 2004: `XXXX.XX`
+- PostgreSQL-backed storage for occupations, admin settings, prompt history, semantic documents, graph data, embeddings, and FAISS index bytes
 
-- **Multilingual Search & Translation**:
-  - Semantic and keyword search supporting multiple Indian languages with automated Indic translation pipelines (`utils/translation_service.py`).
-  - Real-time phonetic transliteration and multilingual query expansion.
-- **Robust Query Intelligence**:
-  - **Spell Correction & Fuzzy Matching (`utils/spell_correction.py`)**: Automatic typo mitigation on statistical terms and government scheme titles.
-  - **Out-of-Vocabulary Handler (`utils/oov_handler.py`)**: Contextual synonym banks (`utils/synonym_bank.py`) mapping non-standard queries to indexed records.
-- **Administrative Intelligence Portal**:
-  - Real-time search query logs, latency metrics, failed search diagnostics, and geographical user analytics (`utils/ip_location.py`).
-  - Role-protected administrative dashboard (`templates/admin/dashboard.html`, `static/admin_dashboard.js`).
-- **Benchmarking & Validation**:
-  - Automated mass performance evaluation suite (`benchmark/tests/run_mass_benchmark.py`) for sub-second query latency guarantees.
+## Quick Start
+1. Create a PostgreSQL database, for example `statathon_nco`.
+2. Create a `.env` file in the project root with your database credentials and admin password:
+   ```env
+   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/statathon_nco
+   ADMIN_PASSWORD=your_secure_admin_password
+   SECRET_KEY=your_random_secret_key
+   ```
+   > **Note:** The `.env` file is git-ignored and never committed. `ADMIN_PASSWORD` is hashed with PBKDF2-SHA256 and stored in PostgreSQL on first startup — the plaintext is never persisted. Do not use `set` or `$env:` — the app loads credentials automatically via `python-dotenv`.
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Import the current CSV/JSON/SQLite data and build search assets:
+   ```bash
+   python scripts/migrate_to_postgres.py
+   ```
+5. Run server:
+   ```bash
+   python app.py
+   ```
+6. Open:
+   - `http://127.0.0.1:5000/`
+   - `http://127.0.0.1:5000/admin`
 
----
-
-## 🛠️ Technology Stack
-
-- **Backend**: Python 3.x, Flask, SQLite / PostgreSQL
-- **NLP & Search**: NLTK, Scikit-learn, Vector Similarity, Custom Synonym & OOV Graphs
-- **Frontend**: Bootstrap 5, D3.js (`d3.v7.min.js`), Chart.js (`chart.umd.min.js`), FontAwesome
-- **Data Migration**: `scripts/migrate_to_postgres.py` for scalable relational persistence
-
----
-
-## 📁 Repository Structure
-
-```
-Eureka-statathon/
-├── app.py                             # Main Flask application & routing
-├── database/
-│   └── db_store.py                    # Database connection, schemas, and queries
-├── utils/
-│   ├── searchapp.py                   # Search execution & scoring engine
-│   ├── translation_service.dart/.py   # Indic translation & transliteration
-│   ├── spell_correction.py            # Domain typo correction
-│   ├── oov_handler.py                 # Out-Of-Vocabulary handling
-│   ├── synonym_bank.py                # Synonym graphs & mappings
-│   └── ip_location.py                 # Regional user analytics
-├── benchmark/
-│   └── tests/run_mass_benchmark.py    # Search throughput & latency benchmarks
-├── templates/                         # Jinja2 views (Search UI & Admin Portal)
-└── static/                            # CSS, Charts, D3 visualizations, and JS
-```
-
----
-
-## 🚀 Getting Started
-
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Download Static & Model Assets
-```bash
-python download_assets.py
-```
-
-### 3. Launch the Application
-```bash
-python app.py
-```
-Open [http://localhost:5000](http://localhost:5000) to access the search portal, or visit `/admin` for the analytics dashboard.
-
----
-
-## 📄 License
-Developed for Statathon by [Kabhilan VS](https://github.com/Kabhilan-VS-05) and collaborators.
+## Documentation
+For deep technical architecture, routes, data flow, validations, status, and maintenance notes, see:
+- `docs/PROJECT_DOCUMENTATION.md`
