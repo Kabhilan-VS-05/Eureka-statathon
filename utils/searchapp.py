@@ -1,8 +1,10 @@
 import json
+import math
 import os
 import numpy as np
 import faiss
 import re
+import difflib
 from sentence_transformers import SentenceTransformer
 import sys
 
@@ -13,6 +15,9 @@ if PROJECT_DIR not in sys.path:
     sys.path.append(PROJECT_DIR)
 
 from database import db_store
+from utils.synonym_bank import expand_query_words
+from utils.oov_handler import oov_handler            # Layer 2 — OOV expansion
+from utils.spell_correction import spell_corrector   # Layer 3 — conservative spell
 
 MODEL_NAME = "BAAI/bge-small-en-v1.5"
 DEFAULT_TOP_K = 5
@@ -106,14 +111,96 @@ def _build_desc_word_sets():
     global _desc_word_sets
     _desc_word_sets = {}
     for code, d in job_details.items():
-        combined = " ".join(filter(None, [
-            d.get("occupation_description", ""),
-            d.get("family_description", ""),
-            d.get("group_description", ""),
-        ]))
-        _desc_word_sets[code] = set(clean_text(combined).split()) - STOPWORDS if combined else set()
+        # Use only occupation-specific description — family/group descriptions are shared
+        # across many occupations and dilute the per-occupation keyword signal.
+        occ_desc = d.get("occupation_description", "")
+        title_text = next(
+            (item.get("occupation_title", "") for item in metadata if item.get("nco_2015") == code),
+            ""
+        )
+        combined = f"{title_text} {occ_desc}"
+        _desc_word_sets[code] = set(clean_text(combined).split()) - STOPWORDS if combined.strip() else set()
 
 _build_desc_word_sets()
+
+
+# ── Data-driven NCO vocabulary with occupation-frequency counts ───────────────
+#
+# Vocabulary is built from occupation titles + hierarchy labels at startup and
+# after every reload_from_db().  No hardcoded word lists or typo mappings exist.
+#
+# _title_vocab_set : set of all known NCO words (used for Gate-1 exact match)
+# _title_vocab_list: sorted list (used by difflib pre-filter in Gate-3)
+# _vocab_freq      : word → count of occupation titles containing that word
+#                    (used for frequency-weighted confidence scoring)
+
+_title_vocab_list: list = []
+_title_vocab_set:  set  = set()
+_vocab_freq:       dict = {}   # word -> title-level occurrence count
+
+
+def _build_title_vocab() -> None:
+    """
+    Build the NCO vocabulary and frequency table from the loaded dataset.
+
+    Frequency is counted at the occupation-title level (each occupation
+    contributes 1 to a word's count regardless of how many times the word
+    appears in that title).  Hierarchy labels (division/group/family/
+    sub_division) that do not appear in any title are added with freq=1 so
+    they are recognised as valid vocabulary but don't inflate scores.
+    """
+    global _title_vocab_list, _title_vocab_set, _vocab_freq
+    freq: dict = {}
+
+    # Count title occurrences (each occupation = one document)
+    for item in metadata:
+        seen_in_title: set = set()
+        for w in re.findall(r"[a-z]{3,}", item.get("occupation_title", "").lower()):
+            if w not in STOPWORDS:
+                seen_in_title.add(w)
+        for w in seen_in_title:
+            freq[w] = freq.get(w, 0) + 1
+
+    # Add hierarchy vocabulary (division/group/family/sub_division) with freq≥1
+    for details in job_details.values():
+        for field in ("division", "group", "family", "sub_division"):
+            for w in re.findall(r"[a-z]{3,}", details.get(field, "").lower()):
+                if w not in STOPWORDS and w not in freq:
+                    freq[w] = 1
+
+    _vocab_freq       = freq
+    _title_vocab_set  = set(freq.keys())
+    _title_vocab_list = sorted(_title_vocab_set)
+
+
+_build_title_vocab()
+
+
+# ── Layer 3 wiring: conservative spell correction ─────────────────────────────
+# The corrector's vocabulary is the dataset (occupation titles + hierarchy) and
+# the OOV/brand terms are registered as protected so they are never "corrected".
+# Rebuilt on reload_from_db() via _configure_spell_corrector().
+
+def _configure_spell_corrector() -> None:
+    spell_corrector.load_vocabulary(_title_vocab_set)
+    try:
+        spell_corrector.add_protected(oov_handler.get_known_oov_words())
+    except Exception as e:
+        print(f"Failed to register OOV terms with spell corrector: {e}")
+
+
+_configure_spell_corrector()
+
+
+def correct_query_spelling(query: str) -> tuple:
+    """
+    Conservative, dataset-driven spell correction (see utils/spell_correction.py).
+
+    Only fixes clear typos that map to a real dataset/English word within a small
+    edit distance. Unknown words, valid words, and protected OOV/brand terms are
+    left unchanged — an unknown word is NOT assumed to be a typo.
+    """
+    return spell_corrector.correct_query(query)
 
 
 def _preprocess_query(query: str) -> str:
@@ -134,23 +221,31 @@ def embed_query(query):
 
 def compute_graph_score(query, occupation_code):
     """
-    Fraction of meaningful query words covered by the occupation's keyword graph.
-    Measures query-side coverage — not penalised by how many keywords the occupation has.
+    Fraction of meaningful query words (+ their synonyms) covered by the
+    occupation's keyword graph.  Synonym expansion via tier-1 curated bank
+    lets "lawyer" match graphs containing "advocate" or "solicitor".
     """
     query_words = set(clean_text(_preprocess_query(query)).split()) - STOPWORDS
     if not query_words:
         return 0.0
+    # Expand with data-driven synonyms — score is still anchored to original query length
+    expanded = expand_query_words(query_words)
     keywords = set(gn.get(occupation_code, {}).get("keywords", []))
     if not keywords:
         return 0.0
-    overlap = query_words & keywords
-    return len(overlap) / len(query_words)
+    overlap = expanded & keywords
+    # Denominator stays as original query word count to avoid inflating scores
+    return min(len(overlap) / len(query_words), 1.0)
 
 
 def compute_description_score(query, occupation_code):
     """
-    Fraction of meaningful query words that appear in the occupation's description text.
-    Provides a lightweight keyword-level signal independent of SBERT.
+    Fraction of meaningful query words covered by the occupation's description.
+
+    Three credit levels:
+      1.0 — exact word match
+      0.8 — synonym match (curated tier-1 bank)
+      0.7 — prefix/stem overlap (e.g. "engineer" ↔ "engineering")
     """
     query_words = set(clean_text(_preprocess_query(query)).split()) - STOPWORDS
     if not query_words:
@@ -158,8 +253,23 @@ def compute_description_score(query, occupation_code):
     desc_words = _desc_word_sets.get(occupation_code, set())
     if not desc_words:
         return 0.0
-    overlap = query_words & desc_words
-    return len(overlap) / len(query_words)
+    score = 0.0
+    for qw in query_words:
+        if qw in desc_words:
+            score += 1.0
+        else:
+            # Synonym match (data-driven bank)
+            syns = expand_query_words({qw}) - {qw}
+            if syns & desc_words:
+                score += 0.8
+            # Prefix/stem partial credit
+            elif any(
+                (dw.startswith(qw) or qw.startswith(dw))
+                for dw in desc_words
+                if abs(len(dw) - len(qw)) <= 4 and len(qw) >= 4
+            ):
+                score += 0.7
+    return score / len(query_words)
 
 
 # ------------------ HELPER FUNCTIONS ------------------
@@ -252,15 +362,32 @@ def reload_from_db():
         }
 
     _build_desc_word_sets()
+    _build_title_vocab()
+    _configure_spell_corrector()   # refresh Layer-3 vocab after dataset change
 
 # ------------------ SEARCH FUNCTION ------------------
 def search(query, top_k=DEFAULT_TOP_K, filters=None):
-    import difflib
     try:
         top_k = int(top_k)
     except (TypeError, ValueError):
         top_k = DEFAULT_TOP_K
     top_k = max(1, min(top_k, MAX_TOP_K))
+
+    # ── Pipeline: OOV expansion → conservative spell → (synonym at scoring) ────
+    # Layer 2: expand true OOV terms (brands, vernacular, abbreviations) first.
+    # OOV terms are registered as protected with the spell corrector, so the
+    # following spell pass never alters them.
+    try:
+        query = oov_handler.process_query(query)
+    except Exception as e:
+        print(f"Failed OOV Expansion: {e}")
+
+    # Layer 3: conservative spell correction. Runs before downstream scoring so
+    # the corrected text feeds FAISS embedding, title matching, graph and
+    # description scoring consistently. Unknown/valid/OOV words are preserved.
+    corrected, was_corrected = correct_query_spelling(query)
+    if was_corrected:
+        query = corrected
 
     has_filters = filters and any(filters.values())
     clean_query = query.strip().lower()
@@ -348,8 +475,14 @@ def search(query, top_k=DEFAULT_TOP_K, filters=None):
             BETA  * gn_score +
             GAMMA * desc_score
         )
-        # Reduce title cosine weight — it hurts descriptive/sentence queries
-        final_score = min(0.78 * combined + 0.22 * float(title_score), 1.0)
+        # Adaptive title weight: short queries (≤2 meaningful words) benefit more
+        # from title similarity; longer descriptive queries should weight combined higher.
+        clean_words = [w for w in clean_text(query).split() if w not in STOPWORDS]
+        if len(clean_words) <= 2:
+            title_w, combined_w = 0.28, 0.72
+        else:
+            title_w, combined_w = 0.18, 0.82
+        final_score = min(combined_w * combined + title_w * float(title_score), 1.0)
 
         candidates.append({
             "occupation_title": metadata[idx]["occupation_title"],

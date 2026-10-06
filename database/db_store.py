@@ -133,6 +133,18 @@ def init_db():
                     password_hash TEXT NOT NULL,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 );
+
+                -- Layer 1: dataset-derived synonym bank (word -> ranked synonyms)
+                CREATE TABLE IF NOT EXISTS synonym_bank (
+                    word TEXT PRIMARY KEY,
+                    synonyms JSONB NOT NULL DEFAULT '[]'::jsonb
+                );
+
+                -- Layer 2: small curated OOV dictionary (term -> standard concepts)
+                CREATE TABLE IF NOT EXISTS oov_dictionary (
+                    term TEXT PRIMARY KEY,
+                    concepts JSONB NOT NULL DEFAULT '[]'::jsonb
+                );
                 """
             )
 
@@ -558,6 +570,52 @@ def load_graph():
                 payload.setdefault("keywords", list(row.get("keywords") or []))
                 graph[row["nco_code"]] = payload
             return graph
+
+
+# ── Layer 1: synonym bank (synonym_bank table) ────────────────────────────────
+
+def save_synonym_bank(expand: dict):
+    """Replace the entire synonym bank. `expand` is {word: [synonym, ...]}."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("TRUNCATE synonym_bank")
+            psycopg2.extras.execute_values(
+                cur,
+                "INSERT INTO synonym_bank (word, synonyms) VALUES %s",
+                [(w, psycopg2.extras.Json(list(syns))) for w, syns in expand.items()],
+                page_size=1000,
+            )
+
+
+def load_synonym_bank() -> dict:
+    """Return {word: [synonym, ...]} from PostgreSQL (empty dict if none)."""
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT word, synonyms FROM synonym_bank")
+            return {row["word"]: list(row["synonyms"] or []) for row in cur.fetchall()}
+
+
+# ── Layer 2: OOV dictionary (oov_dictionary table) ────────────────────────────
+
+def save_oov_dictionary(oov: dict):
+    """Replace the entire OOV dictionary. `oov` is {term: [concept, ...]}."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("TRUNCATE oov_dictionary")
+            psycopg2.extras.execute_values(
+                cur,
+                "INSERT INTO oov_dictionary (term, concepts) VALUES %s",
+                [(t, psycopg2.extras.Json(list(concepts))) for t, concepts in oov.items()],
+                page_size=1000,
+            )
+
+
+def load_oov_dictionary() -> dict:
+    """Return {term: [concept, ...]} from PostgreSQL (empty dict if none)."""
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT term, concepts FROM oov_dictionary")
+            return {row["term"]: list(row["concepts"] or []) for row in cur.fetchall()}
 
 
 def save_asset(name, data, content_type):

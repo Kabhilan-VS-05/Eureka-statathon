@@ -1,6 +1,6 @@
 # PROJECT_DOCUMENTATION.md
 
-> Last updated: 2026-06-15
+> Last updated: 2026-06-18
 
 ---
 
@@ -42,6 +42,9 @@ database/
   db_store.py                   All PostgreSQL schema creation and helpers
 utils/
   searchapp.py                  SBERT + FAISS hybrid search engine (in-memory)
+  synonym_bank.py               Layer 1 — dataset-derived synonym loader (PG + CSV)
+  oov_handler.py                Layer 2 — curated OOV expansion loader (PG + CSV)
+  spell_correction.py           Layer 3 — conservative dataset-driven spell corrector
   dynamic_prompts.py            PIGS v2/v3 prompt intelligence system
   translation_service.py        Multi-service translation (MyMemory, LibreTranslate)
   ip_location.py                IP → city/state/country via ip-api.com (cached)
@@ -56,7 +59,9 @@ static/
   admin_dashboard.css           Admin dashboard styles
   admin_dashboard.js            Admin dashboard JS (all tab logic)
 scripts/
-  migrate_to_postgres.py        One-time CSV → PostgreSQL migration
+  migrate_to_postgres.py        One-time CSV → PostgreSQL migration (also builds Layers 1 & 2)
+  generate_synonym_bank.py      Layer 1 — build dataset-derived synonym bank → CSV + PostgreSQL
+  generate_oov_dictionary.py    Layer 2 — build curated OOV dictionary → CSV + PostgreSQL
   set_admin_password.py         Interactive admin password manager
   import_prompt_history.py      Bulk import prompt_history from JSON file
 docs/
@@ -68,6 +73,9 @@ config/
   gunicorn.conf.py              Gunicorn configuration
 data/raw/
   nco_dataset_v6_final.csv      Source CSV for migration (not runtime)
+data/processed/
+  synonym_bank.csv              Layer 1 editable artifact (word,synonyms)
+  oov_dictionary.csv            Layer 2 editable artifact (term,concepts)
 ```
 
 ---
@@ -112,6 +120,22 @@ Stores: `nco_faiss.index`, `nco_embeddings.npy`
 | data | JSONB |
 
 Each entry: `{"keywords": [...], "related": [...]}`
+
+### `synonym_bank` — Layer 1 dataset-derived synonyms
+| Column | Type | Notes |
+|---|---|---|
+| word | TEXT PK | meaningful term from the NCO dataset |
+| synonyms | JSONB | ranked list of co-occurring synonyms |
+
+Built by `scripts/generate_synonym_bank.py` from NCO family co-occurrence (no manual lists). Mirrored to `data/processed/synonym_bank.csv` for editing/audit. PostgreSQL is the runtime source of truth; CSV is the fallback.
+
+### `oov_dictionary` — Layer 2 curated OOV terms
+| Column | Type | Notes |
+|---|---|---|
+| term | TEXT PK | brand / vernacular / abbreviation (single- or multi-word) |
+| concepts | JSONB | standard-English concepts the engine understands |
+
+Built by `scripts/generate_oov_dictionary.py` from a small curated seed; the generator auto-drops any single-word key already in the NCO dataset so the dictionary never duplicates dataset knowledge. Mirrored to `data/processed/oov_dictionary.csv`. PostgreSQL primary, CSV fallback.
 
 ### `prompt_history` — search telemetry
 | Column | Type | Notes |
@@ -193,14 +217,37 @@ Options:
 - Job details dict (descriptions, hierarchy)
 - Description word sets (pre-built for fast keyword matching)
 
+### Query understanding pipeline (Layers 1–3)
+
+Before retrieval, every query passes through three dataset-driven layers
+(`searchapp.search()`):
+
+1. **Layer 2 — OOV expansion** (`utils/oov_handler.py`): appends standard-English
+   concepts for recognised brands / vernacular / abbreviations. Greedy
+   longest-match n-gram scan, so multi-word keys (`"ward boy"`, `"asha worker"`,
+   `"data entry operator"`) fire. Original wording preserved.
+2. **Layer 3 — conservative spell correction** (`utils/spell_correction.py`):
+   corrects only genuine non-words against the dataset vocabulary, within a small
+   edit distance. Valid English words (star, chair) and protected OOV/brand terms
+   are never altered — *an unknown word is not assumed to be a typo*. No hardcoded
+   typo maps, no aggressive fuzzy fallback.
+3. **Layer 1 — synonym expansion** (`utils/synonym_bank.py`): applied at scoring
+   time inside the graph/description scorers (not as a query-string mutation, to
+   avoid diluting the SBERT vector). Synonyms are dataset-derived from NCO family
+   co-occurrence — no manual lists.
+
+Order: OOV expand → conservative spell → (synonyms at scoring). Layers 1 & 2 are
+loaded from PostgreSQL (`synonym_bank` / `oov_dictionary` tables) with CSV
+fallback, and re-seeded on `reload_from_db()`.
+
 ### Hybrid search algorithm (`utils/searchapp.py`)
 
 **Constants:**
 ```
-ALPHA = 0.60    # semantic SBERT score weight
-BETA  = 0.25    # graph keyword coverage weight
-GAMMA = 0.15    # description keyword match weight
-CANDIDATE_K = 100
+ALPHA = 0.65    # semantic SBERT score weight
+BETA  = 0.15    # graph keyword coverage weight
+GAMMA = 0.20    # description keyword match weight
+CANDIDATE_K = 150
 TITLE_CANDIDATE_K = 100
 ```
 
@@ -215,10 +262,11 @@ TITLE_CANDIDATE_K = 100
 3. FAISS search on full document index → semantic scores
 4. FAISS search on title index → title scores
 5. For each candidate:
-   - `compute_graph_score()` — fraction of **query** words (minus stopwords) covered by the occupation's keyword graph
-   - `compute_description_score()` — fraction of query words found in `occupation_description + family_description + group_description`
-   - `final_score = 0.65 × (ALPHA×semantic + BETA×graph + GAMMA×desc) + 0.35 × title_score`
-6. Sort by `final_score` descending
+   - `compute_graph_score()` — fraction of **query** words (minus stopwords, plus Layer-1 synonyms) covered by the occupation's keyword graph
+   - `compute_description_score()` — fraction of query words found in the occupation title + description (exact / synonym / prefix credit)
+   - `combined = ALPHA×semantic + BETA×graph + GAMMA×desc`
+   - `final_score = combined_w × combined + title_w × title_score`, with **adaptive title weight** — short queries (≤2 meaningful words): `title_w=0.28`; longer queries: `title_w=0.18`
+6. Sort by `(title_match_priority, -final_score)`
 7. Merge title matches + semantic candidates (deduplicated by NCO code)
 
 **Search result cache**
@@ -383,14 +431,52 @@ Strips first-person filler before embedding:
 ### Stopwords
 Common English words (`i`, `am`, `the`, `a`, `and`, etc.) are stripped from graph and description scoring to prevent false matches.
 
+### Synonym / OOV / spell architecture (3 layers)
+The query-understanding stack is dataset-driven, with minimal manual curation
+(target split ≈ 70% dataset / 20% OOV / 10% spell). **CSV is the editable
+artifact; PostgreSQL is the runtime source of truth** (loaders fall back to CSV
+if the DB is empty/unavailable).
+
+- **Layer 1 — Dataset-derived synonyms** (`generate_synonym_bank.py` →
+  `synonym_bank` table / `synonym_bank.csv`). Synonyms come from NCO **Family
+  co-occurrence** with field-weighted TF-IDF (Title=5, Family/Group name=3,
+  Occupation Description=1; Family/Group *descriptions excluded* as boilerplate).
+  `MIN_CLUSTER_SALIENCE=3` trims weak cross-links. No manual synonym lists;
+  regenerate whenever the dataset changes. (Terms NCO titles differently — e.g.
+  Physician vs "doctor" — yield 0 synonyms here and are handled by SBERT instead.)
+- **Layer 2 — Curated OOV dictionary** (`generate_oov_dictionary.py` →
+  `oov_dictionary` table / `oov_dictionary.csv`). A curated seed of brands,
+  Indian vernacular (Hindi + Tamil/Telugu/Kannada/Malayalam/Bengali/Marathi/
+  Gujarati/Punjabi), abbreviations, and modern/gig roles. The generator
+  **auto-drops any single-word key already in the NCO dataset**, so the file
+  never duplicates dataset knowledge. Add terms by editing the `SEED` dict and
+  rerunning the script (CSV + DB update together).
+- **Layer 3 — Conservative spell correction** (`spell_correction.py`).
+  Candidates are built from dataset vocabulary; only genuine non-words are fixed,
+  within edit distance ≤ 2 (distance-2 must land on a dataset word). Valid words
+  and OOV/brand terms are always preserved. Replaces the old aggressive
+  `difflib` cutoff-0.45 fallback that forced gibberish onto vocabulary.
+
 ---
 
 ## 14. Scripts
 
 ### `scripts/migrate_to_postgres.py`
-One-time import from CSV/JSON/SQLite into PostgreSQL. Also builds embeddings, FAISS index, and graph.
+One-time import from CSV/JSON/SQLite into PostgreSQL. Also builds embeddings, FAISS index, graph, and — at the end — runs both Layer 1 and Layer 2 generators so a fresh deploy populates everything in one command.
 ```bash
 python scripts/migrate_to_postgres.py
+```
+
+### `scripts/generate_synonym_bank.py` (Layer 1)
+Rebuilds the dataset-derived synonym bank from the NCO CSV. Writes `data/processed/synonym_bank.csv` and stores it in the `synonym_bank` PostgreSQL table. Run after any dataset change.
+```bash
+python scripts/generate_synonym_bank.py
+```
+
+### `scripts/generate_oov_dictionary.py` (Layer 2)
+Rebuilds the curated OOV dictionary from the `SEED` dict, auto-dropping any term already in the NCO dataset. Writes `data/processed/oov_dictionary.csv` and stores it in the `oov_dictionary` PostgreSQL table. Edit `SEED` + rerun to add brands / vernacular / abbreviations.
+```bash
+python scripts/generate_oov_dictionary.py
 ```
 
 ### `scripts/set_admin_password.py`

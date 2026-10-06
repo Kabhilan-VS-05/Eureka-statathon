@@ -2366,6 +2366,33 @@
           // Legacy NCO Search Demand Explorer and Bubble Chart code removed
       }
 
+      async function rebuildSearchIndex() {
+        const password = prompt("Enter admin password to rebuild search index:");
+        if (!password) return;
+        const btn = document.getElementById("rebuildIndexBtn");
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rebuilding...';
+        try {
+          const res = await fetch("/admin/api/rebuild-search-index", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ admin_password: password }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            showNotification("Search index rebuilt successfully", "success");
+          } else {
+            showNotification("Rebuild failed: " + (data.error || "Unknown error"), "error");
+          }
+        } catch (e) {
+          showNotification("Rebuild failed: " + e.message, "error");
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      }
+
       // ========================================================
       // INDIA MAP — State-wise Occupation Demand Analysis
       // Performance-optimised: rAF-throttled hover, direct element

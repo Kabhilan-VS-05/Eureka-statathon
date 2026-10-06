@@ -57,6 +57,18 @@ CORS(app)
 Compress(app)   # gzip all text/json responses automatically
 
 # ------------------------------------------------------------------
+# Offline Speech-to-Text (Whisper Multilingual Base)
+# ------------------------------------------------------------------
+stt_pipeline = None
+try:
+    from transformers import pipeline
+    print("Loading offline Whisper STT model (openai/whisper-base)...")
+    stt_pipeline = pipeline("automatic-speech-recognition", model="openai/whisper-base")
+    print("Offline Multilingual STT model loaded successfully.")
+except Exception as e:
+    print(f"Warning: Failed to load Whisper STT model. Offline voice search disabled: {e}")
+
+# ------------------------------------------------------------------
 # In-memory search result cache
 # Keyed on (translated_query, top_k, filters) — avoids re-running
 # SBERT for identical queries within the TTL window.
@@ -316,25 +328,11 @@ def _build_documents_and_metadata(rows):
     metadata = []
     for idx, row in enumerate(rows):
         row_id = int(row.get("_row_id") or idx)
-        doc = f"""
-Occupation Title: {_safe_text(row.get('Occupational Title'))}
-NCO 2015 Code: {_safe_text(row.get('NCO 2015'))}
-
-Hierarchy:
-Division: {_safe_text(row.get('Division'))}
-Sub Division: {_safe_text(row.get('Sub Division'))}
-Group: {_safe_text(row.get('Group'))}
-Family: {_safe_text(row.get('Family'))}
-
-Occupation Description:
-{_safe_text(row.get('Occupation Description'))}
-
-Family Description:
-{_safe_text(row.get('Family Description'))}
-
-Group Description:
-{_safe_text(row.get('Group Description'))}
-""".strip()
+        title = _safe_text(row.get('Occupational Title'))
+        occ_desc = _safe_text(row.get('Occupation Description'))
+        group = _safe_text(row.get('Group'))
+        family = _safe_text(row.get('Family'))
+        doc = f"{title}. {occ_desc}\n\n{group}. {family}.".strip()
         documents.append(doc)
         metadata.append({
             "row_id": row_id,
@@ -356,20 +354,32 @@ def _rebuild_search_assets(rows):
     with open(os.path.join(processed_dir, 'nco_metadata.json'), 'w', encoding='utf-8') as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
+    GRAPH_STOPWORDS = {
+        "i","me","my","we","our","you","your","he","she","it","his","her","its",
+        "they","their","this","that","these","those","am","is","are","was","were",
+        "be","been","being","have","has","had","do","does","did","a","an","the",
+        "and","or","but","in","on","at","to","for","of","with","by","from",
+        "will","would","could","should","may","might","can","as","if","then",
+        "so","up","out","about","into","through","during","some","any","all",
+        "each","both","few","more","most","other","such","no","not","only","own",
+        "same","than","too","very","just","also","still","now","how","where",
+        "when","what","who","which","there","here",
+        "work","works","working","worked","person","people","professional",
+        "worker","workers","staff","employee","employees",
+    }
+    # Build a lookup from nco_2015 → row for sector and occupation description
+    row_lookup = {_safe_text(r.get("NCO 2015")): r for r in rows}
     gn = {}
     for idx, item in enumerate(metadata):
         code = item["nco_2015"]
-        desc = documents[idx].lower() if idx < len(documents) else ""
-        words = re.findall(r"\b[a-z]{3,}\b", desc)
-        keywords = list(set(words))
-        sector = "unknown"
-        if "division:" in desc:
-            lines = desc.split("\n")
-            for line in lines:
-                if line.strip().startswith("division:"):
-                    sector = line.split(":", 1)[1].strip().title()
-                    break
-        gn[code] = {"sector": sector, "keywords": keywords}
+        row = row_lookup.get(code, {})
+        title_text = _safe_text(row.get("Occupational Title", ""))
+        occ_desc_text = _safe_text(row.get("Occupation Description", ""))
+        occ_text = f"{title_text} {occ_desc_text}".lower()
+        words = re.findall(r"\b[a-z]{3,}\b", occ_text)
+        keywords = [w for w in set(words) if w not in GRAPH_STOPWORDS]
+        division = _safe_text(row.get("Division", "unknown"))
+        gn[code] = {"sector": division, "keywords": keywords}
     db_store.save_graph(gn)
 
     # Save graph JSON file locally as well
@@ -475,31 +485,7 @@ def search_jobs():
     
     try:
         if query:
-            spelling_correction = None
-            if search_mode == "general":
-                close_matches = db_store.get_spelling_suggestions(query, limit=1)
-                if close_matches and close_matches[0].lower() != query.lower():
-                    import difflib
-                    ratio = difflib.SequenceMatcher(None, query.lower(), close_matches[0].lower()).ratio()
-                    if ratio >= 0.7:  # high confidence match
-                        spelling_correction = {
-                            "original": query,
-                            "corrected": close_matches[0]
-                        }
-                        query = close_matches[0]
-
-            if search_mode == "nco":
-                results = _search_by_nco_code(query)[:top_k]
-                return jsonify({
-                    "results": results,
-                    "suggestion": None,
-                    "translation_notice": None,
-                    "language_ambiguity": None,
-                    "top_k": top_k,
-                    "spelling_correction": spelling_correction
-                })
-
-            # Manual language translation (translate only if user_language is provided and is not English)
+            # 1. Manual language translation (translate only if user_language is provided and is not English)
             translated_query = query
             translation_notice = None
             language_ambiguity = None
@@ -516,8 +502,30 @@ def search_jobs():
                         }
                 except Exception as ex:
                     print(f"Translation failed: {ex}")
+
+            # 2. Spelling correction (happens AFTER translation, so it operates on English)
+            spelling_correction = None
+            if search_mode == "general":
+                corrected_q, was_corrected = search_module.correct_query_spelling(translated_query)
+                if was_corrected:
+                    spelling_correction = {
+                        "original": translated_query,
+                        "corrected": corrected_q,
+                    }
+                    translated_query = corrected_q
+
+            if search_mode == "nco":
+                results = _search_by_nco_code(translated_query)[:top_k]
+                return jsonify({
+                    "results": results,
+                    "suggestion": None,
+                    "translation_notice": None,
+                    "language_ambiguity": None,
+                    "top_k": top_k,
+                    "spelling_correction": spelling_correction
+                })
             
-            # Use the search function — cached to avoid re-running SBERT
+            # 3. Use the search function — cached to avoid re-running SBERT
             _ck = _search_cache_key(translated_query, top_k, filters)
             results = _get_cached_search(_ck)
             if results is None:
@@ -613,6 +621,35 @@ def suggest_completions():
         suggestions = db_store.get_spelling_suggestions(query, limit=10)
         return jsonify({"suggestions": suggestions})
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/stt', methods=['POST'])
+def offline_stt():
+    if not stt_pipeline:
+        return jsonify({"error": "Offline Speech-to-Text model is not loaded or unsupported on this machine."}), 503
+        
+    data = request.get_json()
+    if not data or 'audio' not in data:
+        return jsonify({"error": "No raw audio float array provided in 'audio' field."}), 400
+        
+    try:
+        import numpy as np
+        # Convert JS floats to float32 NumPy array
+        audio_floats = np.array(data['audio'], dtype=np.float32)
+        
+        lang_code = data.get("language", "auto")
+        generate_kwargs = {}
+        if lang_code and lang_code != "auto":
+            # Extract base language code (e.g., "en-us" -> "en", "en-IN" -> "en")
+            base_lang = str(lang_code).split("-")[0].lower()
+            generate_kwargs["language"] = base_lang
+            
+        # Whisper pipeline expects a dict with sampling_rate and raw
+        result = stt_pipeline({"sampling_rate": 16000, "raw": audio_floats}, generate_kwargs=generate_kwargs)
+        
+        return jsonify({"text": result["text"].strip()})
+    except Exception as e:
+        print(f"STT Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/translate', methods=['POST'])
@@ -882,6 +919,22 @@ def delete_occupation(row_id):
     
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/admin/api/rebuild-search-index', methods=['POST'])
+@admin_api_required
+def rebuild_search_index():
+    try:
+        data = request.get_json(silent=True) or {}
+        ok, err = _require_admin_password(data.get("admin_password"))
+        if not ok:
+            return jsonify({"success": False, "error": err}), 403
+
+        _, rows = _load_csv_rows()
+        _rebuild_search_assets(rows)
+        return jsonify({"success": True, "message": "Search index rebuilt successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 # Analytics API endpoints
 @app.route('/admin/api/analytics/divisions')

@@ -7,6 +7,7 @@ requests==2.34.2
 psycopg2-binary==2.9.12
 flask-cors==6.0.4
 python-dotenv==1.2.2
-deep-translator==1.11.4
+transformers
 flask-compress
 gunicorn
+pyspellchecker==0.9.0

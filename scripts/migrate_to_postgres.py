@@ -109,25 +109,11 @@ def build_documents_and_metadata(rows):
     metadata = []
     for idx, row in enumerate(rows):
         row_id = int(row.get("_row_id") or idx)
-        doc = f"""
-Occupation Title: {safe_text(row.get('Occupational Title'))}
-NCO 2015 Code: {safe_text(row.get('NCO 2015'))}
-
-Hierarchy:
-Division: {safe_text(row.get('Division'))}
-Sub Division: {safe_text(row.get('Sub Division'))}
-Group: {safe_text(row.get('Group'))}
-Family: {safe_text(row.get('Family'))}
-
-Occupation Description:
-{safe_text(row.get('Occupation Description'))}
-
-Family Description:
-{safe_text(row.get('Family Description'))}
-
-Group Description:
-{safe_text(row.get('Group Description'))}
-""".strip()
+        title = safe_text(row.get('Occupational Title'))
+        occ_desc = safe_text(row.get('Occupation Description'))
+        group = safe_text(row.get('Group'))
+        family = safe_text(row.get('Family'))
+        doc = f"{title}. {occ_desc}\n\n{group}. {family}.".strip()
         documents.append(doc)
         metadata.append({
             "row_id": row_id,
@@ -137,20 +123,37 @@ Group Description:
     return documents, metadata
 
 
-def build_graph(documents, metadata):
+_GRAPH_STOPWORDS = {
+    "i","me","my","we","our","you","your","he","she","it","his","her","its",
+    "they","their","this","that","these","those","am","is","are","was","were",
+    "be","been","being","have","has","had","do","does","did","a","an","the",
+    "and","or","but","in","on","at","to","for","of","with","by","from",
+    "will","would","could","should","may","might","can","as","if","then",
+    "so","up","out","about","into","through","during","some","any","all",
+    "each","both","few","more","most","other","such","no","not","only","own",
+    "same","than","too","very","just","also","still","now","how","where",
+    "when","what","who","which","there","here",
+    "work","works","working","worked","person","people","professional",
+    "worker","workers","staff","employee","employees",
+}
+
+
+def build_graph(documents, metadata, rows=None):
+    row_lookup = {}
+    if rows:
+        for r in rows:
+            row_lookup[safe_text(r.get("NCO 2015"))] = r
     graph = {}
     for idx, item in enumerate(metadata):
         code = item["nco_2015"]
-        desc = documents[idx].lower() if idx < len(documents) else ""
-        words = re.findall(r"\b[a-z]{3,}\b", desc)
-        keywords = list(set(words))
-        sector = "unknown"
-        if "division:" in desc:
-            for line in desc.split("\n"):
-                if line.strip().startswith("division:"):
-                    sector = line.split(":", 1)[1].strip().title()
-                    break
-        graph[code] = {"sector": sector, "keywords": keywords}
+        row = row_lookup.get(code, {})
+        title_text = safe_text(row.get("Occupational Title", ""))
+        occ_desc_text = safe_text(row.get("Occupation Description", ""))
+        occ_text = f"{title_text} {occ_desc_text}".lower()
+        words = re.findall(r"\b[a-z]{3,}\b", occ_text)
+        keywords = [w for w in set(words) if w not in _GRAPH_STOPWORDS]
+        division = safe_text(row.get("Division", "unknown"))
+        graph[code] = {"sector": division, "keywords": keywords}
     return graph
 
 
@@ -181,7 +184,7 @@ def rebuild_search_assets():
     with open(os.path.join(processed_dir, "nco_metadata.json"), "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
-    graph = build_graph(documents, metadata)
+    graph = build_graph(documents, metadata, rows)
     db_store.save_graph(graph)
 
     # Save graph JSON file locally as well
@@ -224,6 +227,33 @@ def main():
 
     print("Building PostgreSQL-backed search assets...")
     rebuild_search_assets()
+
+    print("Importing synonym bank into PostgreSQL...")
+    syn_path = os.path.join(PROJECT_DIR, "data", "processed", "synonym_bank.json")
+    if os.path.exists(syn_path):
+        try:
+            with open(syn_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                expand_dict = data.get("expand", {})
+                db_store.save_synonym_bank(expand_dict)
+                print(f"Loaded {len(expand_dict)} synonyms.")
+        except Exception as e:
+            print(f"Warning: synonym bank import failed: {e}")
+    else:
+        print("Warning: synonym_bank.json not found.")
+
+    print("Importing OOV dictionary into PostgreSQL...")
+    oov_path = os.path.join(PROJECT_DIR, "data", "processed", "oov_dictionary.json")
+    if os.path.exists(oov_path):
+        try:
+            with open(oov_path, "r", encoding="utf-8") as f:
+                oov_data = json.load(f)
+                db_store.save_oov_dictionary(oov_data)
+                print(f"Loaded {len(oov_data)} OOV entries.")
+        except Exception as e:
+            print(f"Warning: OOV dictionary import failed: {e}")
+    else:
+        print("Warning: oov_dictionary.json not found.")
 
     print("Migration complete.")
     print(f"Database URL: {db_store.DATABASE_URL}")

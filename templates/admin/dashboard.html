@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NCO Analytics Dashboard | Directorate General of Employment</title>
-    <link rel="icon" type="image/svg+xml" href="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" />
-    <!-- Bootstrap 5.3 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- FontAwesome 6.4 Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <!-- System font stack — no external font CDN -->
+    <link rel="icon" type="image/svg+xml" href="/static/vendor/img/Emblem_of_India.svg" />
+    <!-- Local Airgapped Assets -->
+    <link href="/static/vendor/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/static/vendor/css/inter.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/vendor/css/all.min.css" />
+    <link rel="stylesheet" href="/static/admin_dashboard.css?v={{ asset_version }}" />
     
     <link rel="stylesheet" href="{{ url_for('static', filename='admin_dashboard.css') }}?v={{ asset_version }}">
   </head>
@@ -30,7 +30,7 @@
       <div class="header-main">
         <div class="logo-container">
           <img
-            src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+            src="/static/vendor/img/Emblem_of_India.svg"
             alt="Emblem of India"
             class="logo"
             width="48"
@@ -48,7 +48,7 @@
         </div>
         <div class="header-logos-right">
           <img
-            src="https://gc.mic.gov.in/statathon-2025.png"
+            src="/static/vendor/img/statathon-2025.png"
             alt="Statathon Logo"
             class="g20-logo"
             width="120"
@@ -410,6 +410,9 @@
               <button class="btn btn-success" onclick="showAddModal()">
                 <i class="fas fa-plus"></i> Add New Occupation
               </button>
+              <button class="btn btn-warning" id="rebuildIndexBtn" onclick="rebuildSearchIndex()" style="margin-left:10px; color:#fff;">
+                <i class="fas fa-sync-alt"></i> Rebuild Search Index
+              </button>
             </div>
           </div>
           
@@ -731,9 +734,9 @@
       <div class="loading-spinner"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
-    <script src="https://d3js.org/d3.v7.min.js" defer></script>
+    <script src="/static/vendor/js/bootstrap.bundle.min.js" defer></script>
+    <script src="/static/vendor/js/chart.umd.min.js" defer></script>
+    <script src="/static/vendor/js/d3.v7.min.js" defer></script>
     <script src="{{ url_for('static', filename='admin_dashboard.js') }}?v={{ asset_version }}" defer></script>
   </body>
 </html>

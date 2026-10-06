@@ -57,23 +57,7 @@ def resolve_ip_location(ip: str) -> dict:
         _ip_cache[ip] = result
         return result
 
-    try:
-        resp = requests.get(
-            f"http://ip-api.com/json/{ip}",
-            params={"fields": "status,country,regionName,city"},
-            timeout=1
-        )
-        data = resp.json()
-        if data.get("status") == "success":
-            result = {
-                "city": data.get("city", ""),
-                "state": data.get("regionName", ""),
-                "country": data.get("country", ""),
-            }
-        else:
-            result = dict(_EMPTY_RESULT)
-    except Exception:
-        result = dict(_EMPTY_RESULT)
-
+    # Fully airgapped offline mode: do not query external IP API
+    result = dict(_EMPTY_RESULT)
     _ip_cache[ip] = result
     return result

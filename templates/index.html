@@ -3,16 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>National Classification of Occupations</title>
-    <link rel="icon" type="image/svg+xml" href="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='gov-style.css') }}?v={{ asset_version }}"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
+    <title>National Career Service - NCO Navigation</title>
+    <link rel="icon" type="image/svg+xml" href="/static/vendor/img/Emblem_of_India.svg" />
+    <!-- Local Airgapped Fonts & CSS -->
+    <link rel="stylesheet" href="/static/vendor/css/inter.css" />
+    <link rel="stylesheet" href="/static/vendor/css/all.min.css" />
+    <link href="/static/vendor/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Application CSS -->
+    <link rel="stylesheet" href="/static/gov-style.css?v={{ asset_version }}" />
     <style>
       /* System font stack — no external CDN needed, renders instantly on any device */
       /* ── Font & Base ───────────────────────────────────────────── */
@@ -1016,7 +1014,7 @@
       <div class="header-main">
         <div class="logo-container">
           <img
-            src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+            src="{{ url_for('static', filename='vendor/img/Emblem_of_India.svg') }}"
             alt="Emblem of India"
             class="logo"
             width="48"
@@ -1034,7 +1032,7 @@
         </div>
         <div class="header-logos-right">
           <img
-            src="https://gc.mic.gov.in/statathon-2025.png"
+            src="/static/vendor/img/statathon-2025.png"
             alt="Statathon Logo"
             class="g20-logo"
             width="120"
@@ -2552,100 +2550,182 @@
         }
       };
 
-      // --- Voice & Translation Logic ---
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+      // --- Voice & Translation Logic (100% Offline via Whisper + Auto-Stop) ---
+      let mediaRecorder;
+      let audioChunks = [];
+      let isRecording = false;
+      let vadInterval = null;
+      let vadAudioContext = null;
+      let micStream = null;
 
       function showMicError(message) {
         transcriptionPreview.innerHTML = `<em style="color: red;">${message}</em>`;
       }
 
-      if (recognition) {
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
-        let isListening = false;
-
-        micBtn.addEventListener("click", () => {
-          if (isListening) {
-            recognition.stop();
-            isListening = false;
-          } else {
-            recognition.lang = languageSelect.value;
-            recognition.start();
-            isListening = true;
-          }
-        });
-
-        recognition.onstart = () => {
-          const micIcon = micBtn.querySelector("i");
-          micIcon.classList.remove("fa-microphone");
-          micIcon.classList.add("fa-microphone-slash");
-          micBtn.classList.add("active");
-          transcriptionPreview.innerHTML = "<em>Listening...</em>";
-          isListening = true;
-        };
-
-        recognition.onend = () => {
-          const micIcon = micBtn.querySelector("i");
-          micIcon.classList.remove("fa-microphone-slash");
-          micIcon.classList.add("fa-microphone");
-          micBtn.classList.remove("active");
-          transcriptionPreview.innerHTML = "";
-          isListening = false;
-        };
-
-        recognition.onerror = (event) => {
-          console.error("Speech recognition error:", event.error);
-          const micIcon = micBtn.querySelector("i");
-          micIcon.classList.remove("fa-microphone-slash");
-          micIcon.classList.add("fa-microphone");
-          micBtn.classList.remove("active");
-          transcriptionPreview.innerHTML = `<em style="color: red;">Error: ${event.error}</em>`;
-          isListening = false;
-        };
-
-        recognition.onresult = async (event) => {
-          let interimTranscript = "";
-          let finalTranscript = "";
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
-            } else {
-              interimTranscript += event.results[i][0].transcript;
+      function stopRecording() {
+        if (!isRecording) return;
+        
+        try {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
             }
-          }
-
-          transcriptionPreview.innerHTML =
-            finalTranscript +
-            '<span class="interim">' +
-            interimTranscript +
-            "</span>";
-
-          if (finalTranscript) {
-            const translatedText = await translateText(
-              finalTranscript,
-              "auto",
-              "en"
-            );
-            occupationSearch.value = translatedText;
-            performSearch(false);
-            // Allow listening again after search completes
-            isListening = false;
-          }
-        };
-      } else {
-        micBtn.classList.add("disabled");
-        micBtn.setAttribute("aria-disabled", "true");
-        micBtn.title =
-          "Voice search not supported in this browser. Use Chrome or Edge over HTTPS or localhost.";
-        micBtn.addEventListener("click", () => {
-          showMicError(
-            "Voice search not supported here. Try Chrome/Edge on HTTPS or localhost."
-          );
-        });
+        } catch(e) {}
+        
+        isRecording = false;
+        if (vadInterval) clearInterval(vadInterval);
+        if (vadAudioContext) {
+            vadAudioContext.close().catch(()=> {});
+            vadAudioContext = null;
+        }
+        
+        const micIcon = micBtn.querySelector("i");
+        micIcon.classList.remove("fa-microphone-slash");
+        micIcon.classList.add("fa-microphone");
+        micBtn.classList.remove("active");
       }
+
+      // Explicitly cut the mic and clear RAM if the user refreshes or closes the page
+      window.addEventListener("beforeunload", () => {
+          stopRecording();
+          audioChunks = []; // instantly clear RAM
+          if (micStream) {
+              micStream.getTracks().forEach(track => track.stop()); // cut hardware process
+          }
+      });
+
+      function startRecording() {
+        audioChunks = [];
+        mediaRecorder.start();
+        isRecording = true;
+        
+        const micIcon = micBtn.querySelector("i");
+        micIcon.classList.remove("fa-microphone");
+        micIcon.classList.add("fa-microphone-slash");
+        micBtn.classList.add("active");
+        transcriptionPreview.innerHTML = "<em>Listening... (Speak now)</em>";
+        
+        // Setup Auto-Stop (Voice Activity Detection)
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        vadAudioContext = new AudioContext();
+        const source = vadAudioContext.createMediaStreamSource(micStream);
+        const analyser = vadAudioContext.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        let hasSpoken = false;
+        let silenceStart = 0;
+        
+        vadInterval = setInterval(() => {
+            if (!isRecording) return;
+            analyser.getByteFrequencyData(dataArray);
+            
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+            let averageVolume = sum / dataArray.length;
+            
+            // Threshold for speaking vs silence
+            const THRESHOLD = 10; 
+            
+            if (averageVolume > THRESHOLD) {
+                if (!hasSpoken) {
+                    hasSpoken = true;
+                    transcriptionPreview.innerHTML = "<em>Recording...</em>";
+                }
+                silenceStart = 0; // Reset silence timer while speaking
+            } else {
+                if (hasSpoken) {
+                    if (silenceStart === 0) {
+                        silenceStart = Date.now();
+                    } else if (Date.now() - silenceStart > 1500) {
+                        // 1.5 seconds of silence AFTER speaking -> Auto Stop
+                        transcriptionPreview.innerHTML = "<em>Processing audio...</em>";
+                        stopRecording();
+                    }
+                }
+            }
+        }, 100);
+      }
+
+      async function initOfflineMic() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+           micBtn.classList.add("disabled");
+           micBtn.addEventListener("click", () => showMicError("Microphone API not supported by browser. Use HTTPS."));
+           return;
+        }
+
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(micStream);
+          
+          mediaRecorder.ondataavailable = e => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+             transcriptionPreview.innerHTML = "<em>Processing offline via Whisper...</em>";
+             const audioBlob = new Blob(audioChunks);
+             audioChunks = [];
+             
+             try {
+                 // 1. Decode audio to get raw PCM
+                 const arrayBuffer = await audioBlob.arrayBuffer();
+                 const AudioContext = window.AudioContext || window.webkitAudioContext;
+                 const audioCtx = new AudioContext({ sampleRate: 16000 });
+                 const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                 
+                 // 2. Extract channel data (Float32Array, 16kHz)
+                 const float32Array = audioBuffer.getChannelData(0);
+                 
+                 // 3. Send raw float array to Flask along with selected language
+                 const langCode = document.getElementById("languageSelect").value;
+                 const response = await fetch("/api/stt", {
+                     method: "POST",
+                     headers: { "Content-Type": "application/json" },
+                     body: JSON.stringify({ 
+                         audio: Array.from(float32Array),
+                         language: langCode 
+                     })
+                 });
+                 
+                 const data = await response.json();
+                 
+                 if (data.error) {
+                     showMicError("Offline STT Error: " + data.error);
+                     return;
+                 }
+                 
+                 const finalTranscript = data.text;
+                 transcriptionPreview.innerHTML = `<span>${finalTranscript}</span>`;
+                 
+                 if (finalTranscript) {
+                     const translatedText = await translateText(finalTranscript, langCode, "en");
+                     occupationSearch.value = translatedText;
+                     performSearch(false);
+                 }
+                 
+             } catch (err) {
+                 console.error("Audio decoding/sending error:", err);
+                 showMicError("Failed to process offline audio.");
+             }
+          };
+
+          micBtn.addEventListener("click", () => {
+            if (isRecording) {
+              stopRecording();
+            } else {
+              startRecording();
+            }
+          });
+
+        } catch (err) {
+           console.error("Microphone access denied:", err);
+           micBtn.classList.add("disabled");
+           micBtn.addEventListener("click", () => showMicError("Microphone access denied."));
+        }
+      }
+
+      initOfflineMic();
 
       async function translateText(text, source, target) {
         try {
